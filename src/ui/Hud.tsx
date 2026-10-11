@@ -14,9 +14,9 @@ export default function Hud() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">L3</div>
             <div>
               <div className="text-sm font-semibold leading-tight text-slate-800">Logística 3D</div>
-              <div className="text-[11.5px] leading-tight text-slate-500">Terminal de contenedores · Montevideo</div>
+              <div className="text-[11.5px] leading-tight text-slate-500">Puerto de Montevideo</div>
             </div>
-            <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800">Demo · datos simulados</span>
+            <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800">Mapa real · operación simulada</span>
           </Panel>
           <Kpis />
         </div>
@@ -27,8 +27,9 @@ export default function Hud() {
           <InfoCard />
         </div>
         <TimeBar />
-        <p className="text-center text-[10.5px] text-slate-500">
-          Demo de estilo · buques, llegadas y operación simulados · dimensiones típicas, no las de la terminal real · tocá un buque, una grúa o el patio
+        <p className="pointer-events-auto mx-auto rounded-md bg-white/75 px-2 py-0.5 text-center text-[10.5px] text-slate-600 backdrop-blur">
+          Relieve: Copernicus DEM · Imagen: Copernicus Sentinel-2 (feb 2026) · Edificios: Overture Maps / © colaboradores de OpenStreetMap (ODbL) ·
+          Ubicación y frente del muelle reales; patio, grúas, buques y operación simulados · tocá un buque, una grúa o el patio
         </p>
       </div>
     </div>

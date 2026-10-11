@@ -6,10 +6,10 @@ import { CONTAINER_COLORS, LAND_Y } from './layout'
 
 // Circuito de los camiones: calle del muelle, lateral, calle trasera y vuelta.
 const PATH: [number, number][] = [
-  [-545, 78],
-  [545, 78],
-  [545, 240],
-  [-545, 240],
+  [-330, 78],
+  [330, 78],
+  [330, 300],
+  [-330, 300],
 ]
 const SEGMENTS = PATH.map((a, i) => {
   const b = PATH[(i + 1) % PATH.length]

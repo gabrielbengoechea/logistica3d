@@ -4,8 +4,9 @@ Explorador 3D didáctico de la cadena logística, empezando por el puerto de Mon
 está en el **simulador**: el alumno cambia condiciones (más buques, menos grúas, un muelle cerrado) y ve en 3D
 cómo cambian las colas, la espera y el patio.
 
-Estado: **Hito 0, demo de estilo.** La terminal es ilustrativa y todos los datos son simulados.
-Los datos reales (terreno, OpenStreetMap, AIS) llegan en los hitos 1 y 2.
+Estado: **Hito 1 en curso.** El mapa es real: relieve (Copernicus DEM), imagen satelital (Sentinel-2) y
+edificios (Overture / OpenStreetMap) del puerto de Montevideo. La terminal está en su ubicación real y con
+su frente de muelle real; el patio, las grúas, los buques y la operación son simulados. El AIS llega en el Hito 2.
 
 ## Correr la demo
 
@@ -26,7 +27,9 @@ src/
   sim/terminalSim.ts   simulador básico (pasos de 5 min): llegadas, fondeadero, muelles, grúas, patio y camiones
   sim/events.ts        formato de eventos común (simulador hoy, replay AIS después)
   sim/tracks.ts        reconstruye el recorrido de cada buque a partir de los eventos
-  scene/               escena 3D con React Three Fiber: terminal, buques, grúas, patio, camiones, escalas
+  scene/               escena 3D con React Three Fiber: mapa real, terminal, buques, grúas, patio, camiones, escalas
+public/zones/          datos de cada zona generados por el pipeline (relieve, imagen, geometría)
+tools/pipeline/        pipeline de zona en Python (Copernicus DEM, Sentinel-2, Overture Maps)
   ui/                  indicadores, panel del simulador, fichas y línea de tiempo
 tools/ais_recorder/    grabador e informe de cobertura AIS (Python)
 docs/                  borradores de pedidos de datos a ANP y SOHMA
@@ -40,7 +43,14 @@ El 3D es una capa sobre los datos: el simulador escribe eventos (`arrive`, `bert
 - Los buques solo descargan; la carga de exportación no está modelada.
 - Llegadas al azar (Poisson), sin ventanas de atraque ni prioridades.
 - Cada contenedor queda en promedio 20 h en el patio, con un tope de camiones por hora.
-- Medidas típicas de una terminal de contenedores, no las de la terminal real de Montevideo.
+- El frente de muelle (~630 m, dos sitios) es el real; el muelle 3 es una ampliación hipotética.
+  Patio, grúas y productividad son típicos, no los de la terminal real.
+
+## Fuentes y licencias
+
+- Relieve: Copernicus DEM GLO-30, © DLR e.V. 2010-2014 y © Airbus Defence and Space GmbH 2014-2018, provisto bajo COPERNICUS por la Unión Europea y la ESA.
+- Imagen: Copernicus Sentinel-2 (escena del 8 de febrero de 2026), datos abiertos de Copernicus.
+- Edificios y geometría: Overture Maps Foundation, con datos © colaboradores de OpenStreetMap (ODbL).
 
 ## Publicación
 

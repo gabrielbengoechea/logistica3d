@@ -3,17 +3,25 @@ import { useFrame } from '@react-three/fiber'
 import { CameraControls } from '@react-three/drei'
 import { useStore, type View } from '../store'
 import Cranes from './Cranes'
-import Ground from './Ground'
-import ScaleComparison from './ScaleComparison'
+import { TERMINAL, toWorld } from './layout'
+import ScaleComparison, { SCALE_AT } from './ScaleComparison'
 import Ships from './Ships'
+import TerminalPad from './TerminalPad'
 import Trucks from './Trucks'
+import World from './World'
 import Yard from './Yard'
+import { useZone } from './zone'
 
-/** Cámara de cada vista: posición y punto mirado. */
+const fromTerminal = (x: number, y: number, z: number): [number, number, number] => {
+  const [wx, wz] = toWorld(x, z)
+  return [wx, y, wz]
+}
+
+/** Cámara de cada vista: posición y punto mirado, en el marco del mapa. */
 export const VIEWS: Record<View, [number, number, number, number, number, number]> = {
-  terminal: [430, 330, 640, 0, 0, 20],
-  bahia: [1500, 3000, 2400, -500, 0, -900],
-  escalas: [-540, 430, 760, -830, 30, 190],
+  terminal: [...fromTerminal(380, 360, 760), ...fromTerminal(0, 0, 40)],
+  bahia: [2600, 5200, 7600, -1300, 0, 1200],
+  escalas: [SCALE_AT[0] + 250, 420, SCALE_AT[1] + 560, SCALE_AT[0] - 30, 20, SCALE_AT[1]],
 }
 
 function Clock() {
@@ -25,6 +33,7 @@ function Clock() {
 export default function Scene() {
   const controls = useRef<CameraControls>(null)
   const view = useStore((s) => s.view)
+  const zone = useZone('montevideo')
 
   useEffect(() => {
     const [px, py, pz, tx, ty, tz] = VIEWS[view]
@@ -33,16 +42,20 @@ export default function Scene() {
 
   return (
     <>
-      <color attach="background" args={['#eef3f8']} />
+      <color attach="background" args={['#dfe9f1']} />
+      <fog attach="fog" args={['#dfe9f1', 9000, 30000]} />
       <hemisphereLight args={['#ffffff', '#b9c6d3', 1.8]} />
       <directionalLight position={[800, 1500, 600]} intensity={1.5} />
-      <CameraControls ref={controls} minDistance={60} maxDistance={8000} maxPolarAngle={1.35} />
+      <CameraControls ref={controls} minDistance={60} maxDistance={16000} maxPolarAngle={1.35} />
       <Clock />
-      <Ground />
-      <Yard />
-      <Cranes />
+      {zone && <World zone={zone} />}
+      <group position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
+        <TerminalPad />
+        <Yard />
+        <Cranes />
+        <Trucks />
+      </group>
       <Ships />
-      <Trucks />
       <ScaleComparison />
     </>
   )

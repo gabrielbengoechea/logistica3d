@@ -1,0 +1,34 @@
+{
+  "name": "montevideo",
+  "origin": [
+    -56.2125,
+    -34.9015
+  ],
+  "epsg": 32721,
+  "extent": {
+    "xmin": -9877.0,
+    "xmax": 7582.3,
+    "zmin": -5228.7,
+    "zmax": 8213.5
+  },
+  "terrain": {
+    "file": "terrain.bin",
+    "cols": 582,
+    "rows": 448,
+    "res": 30.0,
+    "unit": "dm",
+    "min": -3.0,
+    "max": 133.42306518554688
+  },
+  "imagery": {
+    "file": "imagery.jpg",
+    "width": 1746,
+    "height": 1344,
+    "res": 10.0,
+    "source": "Copernicus Sentinel-2 (2026-02-08)"
+  },
+  "vectors": {
+    "file": "vectors.json",
+    "source": "Overture Maps (incluye datos de OpenStreetMap, ODbL)"
+  }
+}
