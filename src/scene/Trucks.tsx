@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { CONTAINER_COLORS, LAND_Y } from './layout'
+import { getContainerTexture } from './materials'
 
 // Circuito de los camiones: calle del muelle, lateral, calle trasera y vuelta.
 const PATH: [number, number][] = [
@@ -55,17 +56,27 @@ export default function Trucks() {
     <>
       {Array.from({ length: count }, (_, i) => (
         <group key={i} ref={(g) => void (refs.current[i] = g)}>
-          <mesh position={[0, 1.2, 0]}>
-            <boxGeometry args={[15, 1, 2.6]} />
+          <mesh position={[0, 1.6, 0]} castShadow>
+            <boxGeometry args={[15, 0.6, 2.5]} />
             <meshStandardMaterial color="#334155" />
           </mesh>
-          <mesh position={[8.5, 2.4, 0]}>
-            <boxGeometry args={[3.5, 3.4, 2.6]} />
-            <meshStandardMaterial color="#f8fafc" />
+          <mesh position={[8.4, 2.6, 0]} castShadow>
+            <boxGeometry args={[3.4, 3.2, 2.5]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.5} />
           </mesh>
-          <mesh position={[-0.6, 3, 0]}>
+          <mesh position={[9.9, 3.2, 0]}>
+            <boxGeometry args={[0.4, 1.3, 2.3]} />
+            <meshStandardMaterial color="#1e293b" roughness={0.15} metalness={0.5} />
+          </mesh>
+          {[-5.5, -4.2, 5.6, 8.6].map((wx) => (
+            <mesh key={wx} position={[wx, 0.55, 0]} rotation-x={Math.PI / 2}>
+              <cylinderGeometry args={[0.55, 0.55, 2.6, 10]} />
+              <meshStandardMaterial color="#111827" roughness={0.9} />
+            </mesh>
+          ))}
+          <mesh position={[-0.6, 3.2, 0]} castShadow>
             <boxGeometry args={[12.2, 2.6, 2.44]} />
-            <meshStandardMaterial color={colors[i]} />
+            <meshStandardMaterial color={colors[i]} map={getContainerTexture()} roughness={0.7} />
           </mesh>
         </group>
       ))}

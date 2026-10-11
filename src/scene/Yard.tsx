@@ -4,11 +4,13 @@ import * as THREE from 'three'
 import { sampleAt } from '../sim/terminalSim'
 import { useStore } from '../store'
 import { CONTAINER_COLORS, yardSlots } from './layout'
+import { getContainerTexture } from './materials'
 
 /** Pilas de contenedores del patio: se muestran tantos como indique el simulador en el instante actual. */
 export default function Yard() {
   const ref = useRef<THREE.InstancedMesh>(null)
-  const slots = useMemo(() => yardSlots(), [])
+  const tiers = useStore((s) => s.params.yardTiers)
+  const slots = useMemo(() => yardSlots(tiers), [tiers])
   const select = useStore((s) => s.select)
 
   useLayoutEffect(() => {
@@ -34,16 +36,19 @@ export default function Yard() {
 
   return (
     <instancedMesh
+      key={slots.length}
       ref={ref}
       args={[undefined, undefined, slots.length]}
       frustumCulled={false}
+      castShadow
+      receiveShadow
       onClick={(e) => {
         e.stopPropagation()
         select({ kind: 'yard' })
       }}
     >
       <boxGeometry args={[12.2, 2.5, 2.4]} />
-      <meshStandardMaterial roughness={0.8} />
+      <meshStandardMaterial map={getContainerTexture()} roughness={0.75} />
     </instancedMesh>
   )
 }

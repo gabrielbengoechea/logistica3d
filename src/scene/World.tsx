@@ -41,7 +41,7 @@ function Terrain({ zone }: { zone: Zone }) {
 
   if (!texture) return null
   return (
-    <mesh geometry={geometry}>
+    <mesh geometry={geometry} receiveShadow>
       <meshStandardMaterial map={texture} roughness={1} />
     </mesh>
   )
@@ -67,7 +67,7 @@ function Buildings({ zone }: { zone: Zone }) {
   }, [zone])
   if (!geometry) return null
   return (
-    <mesh geometry={geometry}>
+    <mesh geometry={geometry} castShadow receiveShadow>
       <meshStandardMaterial color="#eef1f5" roughness={0.9} />
     </mesh>
   )
@@ -88,10 +88,6 @@ export default function World({ zone }: { zone: Zone }) {
   return (
     <group>
       <Terrain zone={zone} />
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.4, 0]}>
-        <planeGeometry args={[60000, 60000]} />
-        <meshStandardMaterial color="#6fa9c2" transparent opacity={0.28} roughness={0.6} depthWrite={false} />
-      </mesh>
       <Buildings zone={zone} />
       <Label at={[-4119, -1440]} y={140}>Cerro de Montevideo · 134 m</Label>
       <Label at={[589, 559]} y={40}>Ciudad Vieja</Label>

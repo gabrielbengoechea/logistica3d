@@ -50,14 +50,14 @@ export const craneX = (b: number, i: number, n: number) => berthX(b) + (i - (n -
 
 export const CONTAINER_COLORS = ['#d9534f', '#f0ad4e', '#3b7dd8', '#4cae6e', '#8e6cc8', '#e9edf2', '#2bb3b1', '#f47c3c']
 
-/** Posiciones del patio: 12 bloques de 10 bahías x 6 filas x 4 alturas = 2880 contenedores de 40 pies. */
-export function yardSlots(): [number, number, number, number][] {
+/** Posiciones del patio: 12 bloques de 10 bahías x 6 filas x `tiers` alturas (720 contenedores de 40 pies por altura). */
+export function yardSlots(tiers: number): [number, number, number, number][] {
   const rand = mulberry32(11)
   const blocksX = [-240, -80, 80, 240]
   const blocksZ = [130, 185, 240]
   const out: [number, number, number, number][] = []
   // Se llena por alturas: primero la base de todos los bloques, después el segundo nivel, etc.
-  for (let tier = 0; tier < 4; tier++)
+  for (let tier = 0; tier < tiers; tier++)
     for (const bz of blocksZ)
       for (const bx of blocksX)
         for (let bay = 0; bay < 10; bay++)

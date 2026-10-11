@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { CameraControls } from '@react-three/drei'
 import { useStore, type View } from '../store'
-import AisShips from './AisShips'
+import FeedShips from './FeedShips'
+import Lighting from './Lighting'
+import Water from './Water'
 import Cranes from './Cranes'
-import { aisPoseAt } from '../ais/tracks'
+import { poseAt } from '../feeds/positions'
 import { TERMINAL, toWorld } from './layout'
 import ScaleComparison, { SCALE_AT } from './ScaleComparison'
 import Ships from './Ships'
@@ -14,7 +16,6 @@ import World from './World'
 import Yard from './Yard'
 import { shipPose } from './pose'
 import { useZone } from './zone'
-import { craneRate } from '../store'
 
 const fromTerminal = (x: number, y: number, z: number): [number, number, number] => {
   const [wx, wz] = toWorld(x, z)
@@ -37,17 +38,17 @@ function Clock() {
 /** Mientras hay un buque seguido, la cámara mantiene su ángulo y desplaza el punto mirado hasta el buque. */
 function Follow({ controls }: { controls: React.RefObject<CameraControls | null> }) {
   useFrame(() => {
-    const { follow, tracks, aisTracks, source, t, params } = useStore.getState()
+    const { follow, tracks, feedTracks, t, params } = useStore.getState()
     if (!follow || !controls.current) return
-    if (source === 'sim') {
-      const tr = tracks.find((x) => x.ship.id === follow)
-      const p = tr && shipPose(tr, t, craneRate(params))
-      if (p && p.phase !== 'hidden') controls.current.moveTo(p.x, 10, p.z, true)
-    } else {
-      const tr = aisTracks.find((x) => x.ship.id === follow)
-      const p = tr && aisPoseAt(tr, t)
-      if (p && p.visible) controls.current.moveTo(p.x, 10, p.z, true)
+    const tr = tracks.find((x) => x.ship.id === follow)
+    if (tr) {
+      const p = shipPose(tr, t, params)
+      if (p.phase !== 'hidden') controls.current.moveTo(p.x, 10, p.z, true)
+      return
     }
+    const ft = feedTracks.find((x) => x.ship.id === follow)
+    const p = ft && poseAt(ft, t)
+    if (p && p.visible) controls.current.moveTo(p.x, 10, p.z, true)
   })
   return null
 }
@@ -66,10 +67,8 @@ export default function Scene() {
 
   return (
     <>
-      <color attach="background" args={['#dfe9f1']} />
-      <fog attach="fog" args={['#dfe9f1', 9000, 30000]} />
-      <hemisphereLight args={['#ffffff', '#b9c6d3', 1.8]} />
-      <directionalLight position={[800, 1500, 600]} intensity={1.5} />
+      <Lighting />
+      <Water />
       <CameraControls ref={controls} minDistance={60} maxDistance={16000} maxPolarAngle={1.35} />
       <Clock />
       <Follow controls={controls} />
@@ -81,7 +80,7 @@ export default function Scene() {
         <Trucks />
       </group>
       <Ships />
-      <AisShips />
+      <FeedShips />
       <ScaleComparison />
     </>
   )

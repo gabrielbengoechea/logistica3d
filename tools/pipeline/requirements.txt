@@ -1,9 +1,0 @@
-numpy
-pillow
-pyproj
-rasterio
-shapely
-pyarrow
-fsspec
-aiohttp
-requests

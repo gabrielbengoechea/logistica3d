@@ -1,9 +1,26 @@
 import type { SimEvent } from '../sim/events'
-import type { AisShip } from './api'
 
-/** Reportes de un buque AIS en orden de tiempo, listos para interpolar. */
-export interface AisTrack {
-  ship: AisShip
+/**
+ * Recorridos a partir de eventos de posición: la puerta para conectar datos reales en el futuro
+ * (AIS de buques, ADS-B de aviones, GPS de camiones). Ver docs/datos-reales.md.
+ */
+
+/** Vehículo de una fuente externa. Las medidas son opcionales: no todas las fuentes las informan. */
+export interface FeedShip {
+  id: string
+  name: string
+  /** Tipo legible ("Carga", "Tanquero"...). */
+  type: string
+  /** Código de tipo AIS, si lo hay (70-79 = carga). */
+  typeCode: number | null
+  length: number | null
+  beam: number | null
+  destination: string | null
+}
+
+/** Reportes de un vehículo en orden de tiempo, listos para interpolar. */
+export interface PositionTrack {
+  ship: FeedShip
   t: number[]
   x: number[]
   z: number[]
@@ -19,11 +36,11 @@ export const STALE_H = 20 / 60
 /** Grados desde el norte (sentido horario) a rotación de la escena (proa hacia +x, z hacia el sur). */
 const toYaw = (deg: number) => Math.PI / 2 - (deg * Math.PI) / 180
 
-export function emptyTrack(ship: AisShip): AisTrack {
+export function emptyTrack(ship: FeedShip): PositionTrack {
   return { ship, t: [], x: [], z: [], sog: [], yaw: [], status: [] }
 }
 
-export function pushEvent(tr: AisTrack, e: SimEvent, t: number): void {
+export function pushEvent(tr: PositionTrack, e: SimEvent, t: number): void {
   if (!e.pos) return
   if (tr.t.length && t <= tr.t[tr.t.length - 1]) return
   const d = e.data ?? {}
@@ -38,7 +55,7 @@ export function pushEvent(tr: AisTrack, e: SimEvent, t: number): void {
   tr.status.push(d.status ?? null)
 }
 
-export function buildAisTracks(ships: AisShip[], events: SimEvent[]): AisTrack[] {
+export function buildPositionTracks(ships: FeedShip[], events: SimEvent[]): PositionTrack[] {
   const byId = new Map(ships.map((s) => [s.id, emptyTrack(s)]))
   for (const e of events) {
     const tr = byId.get(e.entity)
@@ -47,7 +64,7 @@ export function buildAisTracks(ships: AisShip[], events: SimEvent[]): AisTrack[]
   return [...byId.values()].filter((tr) => tr.t.length > 0)
 }
 
-export interface AisPose {
+export interface PositionPose {
   visible: boolean
   x: number
   z: number
@@ -58,9 +75,9 @@ export interface AisPose {
   age: number
 }
 
-const HIDDEN: AisPose = { visible: false, x: 0, z: 0, yaw: 0, sog: null, status: null, age: Infinity }
+const HIDDEN: PositionPose = { visible: false, x: 0, z: 0, yaw: 0, sog: null, status: null, age: Infinity }
 
-export function aisPoseAt(tr: AisTrack, t: number): AisPose {
+export function poseAt(tr: PositionTrack, t: number): PositionPose {
   const ts = tr.t
   if (!ts.length || t < ts[0]) return HIDDEN
   // Último reporte con tiempo <= t (búsqueda binaria).

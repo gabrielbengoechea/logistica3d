@@ -6,7 +6,7 @@
   ],
   "epsg": 32721,
   "extent": {
-    "xmin": -9877.0,
+    "xmin": -9877,
     "xmax": 7582.3,
     "zmin": -5228.7,
     "zmax": 8213.5
@@ -16,15 +16,15 @@
     "encoding": "terrarium",
     "cols": 582,
     "rows": 448,
-    "res": 30.0,
-    "min": -3.0,
-    "max": 133.42306518554688
+    "res": 30,
+    "min": -3,
+    "max": 134.38873291015625
   },
   "imagery": {
     "file": "imagery.jpg",
     "width": 1746,
     "height": 1344,
-    "res": 10.0,
+    "res": 10,
     "source": "Copernicus Sentinel-2 (2026-02-08)"
   },
   "vectors": {
@@ -32,9 +32,9 @@
     "source": "Overture Maps (incluye datos de OpenStreetMap, ODbL)"
   },
   "terminal": {
-    "x": -685.0,
-    "z": 317.0,
+    "x": -685,
+    "z": 317,
     "yaw": 0.511,
-    "quayLength": 630.0
+    "quayLength": 630
   }
 }

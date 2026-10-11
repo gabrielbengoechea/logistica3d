@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { TERMINAL, toTerminal, toWorld } from './layout'
 
 describe('layout', () => {
-  it('la terminal coincide con la de zone.json (la usa también el servicio AIS)', () => {
+  it('la terminal coincide con la de zone.json (la escribe el script de zona)', () => {
     const zone = JSON.parse(readFileSync(new URL('../../public/zones/montevideo/zone.json', import.meta.url), 'utf8'))
     expect(zone.terminal).toMatchObject({ x: TERMINAL.x, z: TERMINAL.z, yaw: TERMINAL.yaw })
   })

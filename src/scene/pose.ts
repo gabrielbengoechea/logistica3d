@@ -1,4 +1,4 @@
-import { phaseAt, type Phase, type Track } from '../sim/tracks'
+import { phaseAt, type Phase, type PhaseParams, type Track } from '../sim/tracks'
 import { ENTRY, MOUTH, TERMINAL, TURN, anchorageSlot, berthPos, offBerthPos, type P2 } from './layout'
 
 const ease = (u: number) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u))
@@ -35,8 +35,8 @@ export interface Pose {
 }
 
 /** Posición del buque en el mapa en el instante t. */
-export function shipPose(tr: Track, t: number, rate: number): Pose {
-  const { phase, u } = phaseAt(tr, t, rate)
+export function shipPose(tr: Track, t: number, params: PhaseParams): Pose {
+  const { phase, u } = phaseAt(tr, t, params)
   const slot = anchorageSlot(tr.index)
   const hAnchor = heading(ENTRY, slot)
   const pose = (p: P2, yaw: number, load: number): Pose => ({ phase, u, x: p[0], z: p[1], yaw, load })

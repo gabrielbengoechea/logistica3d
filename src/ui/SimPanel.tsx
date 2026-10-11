@@ -1,26 +1,86 @@
-import { useState } from 'react'
-import type { Kpis, SimParams } from '../sim/terminalSim'
-import { aisApiBase } from '../ais/api'
-import { useStore, type Source } from '../store'
-import DataPanel from './DataPanel'
+import { useState, type ReactNode } from 'react'
+import { PRESETS, presetParams } from '../sim/presets'
+import { SHIP_CLASSES, type Kpis, type ShipClassKey, type SimParams } from '../sim/terminalSim'
+import { useStore } from '../store'
 import { hours, num, pct } from './format'
 import Panel from './Panel'
+import { Segmented } from './TimeBar'
+import WeekChart from './WeekChart'
 
-const CONTROLS: { key: keyof SimParams; label: string; min: number; max: number; step: number; unit: string }[] = [
-  { key: 'shipsPerDay', label: 'Buques que llegan por día', min: 1, max: 5, step: 0.5, unit: '' },
-  { key: 'berths', label: 'Muelles habilitados', min: 1, max: 3, step: 1, unit: '' },
-  { key: 'cranesPerBerth', label: 'Grúas por muelle', min: 1, max: 4, step: 1, unit: '' },
-  { key: 'movesPerCraneHour', label: 'Productividad por grúa', min: 15, max: 35, step: 5, unit: 'mov/h' },
-  { key: 'truckMovesPerHour', label: 'Retiro del patio en camión', min: 40, max: 160, step: 10, unit: 'cont/h' },
-]
+/** Control deslizante con su explicación, que se abre con "?". */
+function Slider({
+  id,
+  label,
+  help,
+  value,
+  min,
+  max,
+  step,
+  format,
+  onChange,
+}: {
+  id: string
+  label: string
+  help: string
+  value: number
+  min: number
+  max: number
+  step: number
+  format: (v: number) => string
+  onChange: (v: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 text-[12px] text-slate-600">
+        <label htmlFor={id} className="flex items-center gap-1">
+          {label}
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-500 hover:bg-slate-200"
+            aria-label={`Qué es: ${label}`}
+            aria-expanded={open}
+          >
+            ?
+          </button>
+        </label>
+        <span className="font-semibold tabular-nums text-slate-800">{format(value)}</span>
+      </div>
+      {open && <p className="my-1 rounded-md bg-slate-50 px-2 py-1.5 text-[11.5px] leading-snug text-slate-600">{help}</p>}
+      <input id={id} type="range" className="w-full accent-blue-600" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </div>
+  )
+}
+
+function Section({ title, summary, children, open = false }: { title: string; summary: string; children: ReactNode; open?: boolean }) {
+  return (
+    <details open={open} className="group rounded-xl border border-slate-200 bg-white/60">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2">
+        <span className="text-[12.5px] font-semibold text-slate-800">{title}</span>
+        <span className="truncate text-[11px] text-slate-500">{summary}</span>
+        <span className="text-slate-400 transition group-open:rotate-90">›</span>
+      </summary>
+      <div className="space-y-3 px-3 pt-1 pb-3">{children}</div>
+    </details>
+  )
+}
 
 const ROWS: { label: string; get: (k: Kpis) => number; fmt: (x: number) => string; better: 'low' | 'high' }[] = [
   { label: 'Espera media en fondeadero', get: (k) => k.avgWaitH, fmt: hours, better: 'low' },
   { label: 'Máximo de buques esperando', get: (k) => k.maxQueue, fmt: String, better: 'low' },
+  { label: 'Estadía media en muelle', get: (k) => k.avgBerthH, fmt: hours, better: 'low' },
   { label: 'Buques atendidos', get: (k) => k.shipsServed, fmt: String, better: 'high' },
+  { label: 'Contenedores descargados', get: (k) => k.movesDone, fmt: (x) => x.toLocaleString('es-UY'), better: 'high' },
   { label: 'Ocupación de muelles', get: (k) => k.berthOccupancy, fmt: pct, better: 'high' },
   { label: 'Horas con grúas frenadas por patio lleno', get: (k) => k.hoursYardFull, fmt: hours, better: 'low' },
 ]
+
+const SHIFT_LABEL: Record<SimParams['craneHoursPerDay'], string> = { 8: '1 turno', 16: '2 turnos', 24: '3 turnos' }
+
+function sameParams(a: SimParams, b: SimParams) {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
 
 export default function SimPanel() {
   const [open, setOpen] = useState(() => window.innerWidth >= 900)
@@ -28,11 +88,9 @@ export default function SimPanel() {
   const result = useStore((s) => s.result)
   const base = useStore((s) => s.base)
   const setParam = useStore((s) => s.setParam)
+  const setParams = useStore((s) => s.setParams)
   const saveBase = useStore((s) => s.saveBase)
   const resetToBase = useStore((s) => s.resetToBase)
-  const source = useStore((s) => s.source)
-  const setSource = useStore((s) => s.setSource)
-  const hasAis = aisApiBase() !== null
 
   if (!open)
     return (
@@ -43,65 +101,232 @@ export default function SimPanel() {
       </Panel>
     )
 
+  const active = PRESETS.find((p) => sameParams(presetParams(p), { ...params, seed: presetParams(p).seed, days: presetParams(p).days }))
+  const mixTotal = Object.values(params.mix).reduce((a, b) => a + b, 0) || 1
+  const setMix = (k: ShipClassKey, v: number) => setParam('mix', { ...params.mix, [k]: v })
+
   return (
-    <Panel className="max-h-[48vh] w-full overflow-y-auto p-4 sm:max-h-[calc(100vh-190px)] sm:w-[320px]">
-      <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-800">{source === 'sim' ? 'Simulador' : 'Datos AIS'}</h2>
+    <Panel className="max-h-[48vh] w-full overflow-y-auto p-4 sm:max-h-[calc(100vh-190px)] sm:w-[340px]">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-800">Simulador</h2>
         <button className="text-xs text-slate-400 hover:text-slate-600" onClick={() => setOpen(false)}>
           ocultar
         </button>
       </div>
-      {hasAis && (
-        <div className="mb-3 flex rounded-lg bg-slate-100 p-0.5">
-          {(
-            [
-              ['sim', 'Simulación'],
-              ['replay', 'AIS · día'],
-              ['live', 'AIS · vivo'],
-            ] as [Source, string][]
-          ).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setSource(k)}
-              className={`flex-1 rounded-md px-2 py-1 text-[12px] font-medium ${source === k ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-      {source !== 'sim' ? (
-        <DataPanel />
-      ) : (
-        <>
-      <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-[12px] leading-snug text-blue-900">
-        <b>Antes de mover un control, predecí:</b> si llegan 3,5 buques por día en vez de 2,5, ¿cuánto crece la espera? ¿Y si sumás un muelle?
-      </p>
-      <div className="space-y-3">
-        {CONTROLS.map((c) => (
-          <label key={c.key} className="block">
-            <div className="flex justify-between text-[12px] text-slate-600">
-              <span>{c.label}</span>
-              <span className="font-semibold tabular-nums text-slate-800">
-                {num(params[c.key], c.step < 1 ? 1 : 0)} {c.unit}
-              </span>
-            </div>
-            <input
-              type="range"
-              className="w-full accent-blue-600"
-              min={c.min}
-              max={c.max}
-              step={c.step}
-              value={params[c.key]}
-              onChange={(e) => setParam(c.key, Number(e.target.value))}
-            />
-          </label>
+
+      <div className="mb-1 text-[10.5px] font-medium uppercase tracking-wide text-slate-400">Escenarios</div>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {PRESETS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setParams({ ...presetParams(p), seed: params.seed, days: params.days })}
+            className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium ${active?.key === p.key ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'}`}
+          >
+            {p.label}
+          </button>
         ))}
+      </div>
+      <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-[12px] leading-snug text-blue-900">
+        {active ? active.question : 'Escenario propio.'} <b>Antes de mirar los resultados, predecí qué va a pasar.</b>
+      </p>
+
+      <div className="space-y-2">
+        <Section title="Llegadas" summary={`${num(params.shipsPerDay)} por día · ${params.arrivals === 'random' ? 'al azar' : 'programadas'}`} open>
+          <Slider
+            id="p-ships"
+            label="Buques que llegan por día"
+            help="Promedio de llegadas. La terminal real recibe del orden de 2 a 3 portacontenedores por día."
+            value={params.shipsPerDay}
+            min={0.5}
+            max={6}
+            step={0.5}
+            format={(v) => num(v)}
+            onChange={(v) => setParam('shipsPerDay', v)}
+          />
+          <div>
+            <div className="mb-1 text-[12px] text-slate-600">Cómo llegan</div>
+            <Segmented
+              items={['random', 'scheduled'] as const}
+              value={params.arrivals}
+              onChange={(v) => setParam('arrivals', v)}
+              label={(v) => (v === 'random' ? 'Al azar' : 'Con itinerario')}
+            />
+            <p className="mt-1 text-[11px] leading-snug text-slate-500">
+              {params.arrivals === 'random'
+                ? 'Llegadas independientes: a veces se juntan varios buques y a veces no viene ninguno.'
+                : 'Servicios regulares con horario fijo y hasta 3 h de atraso o adelanto.'}
+            </p>
+          </div>
+          <div>
+            <div className="mb-1 text-[12px] text-slate-600">Mezcla de buques</div>
+            <div className="space-y-2">
+              {(Object.keys(SHIP_CLASSES) as ShipClassKey[]).map((k) => {
+                const c = SHIP_CLASSES[k]
+                return (
+                  <Slider
+                    key={k}
+                    id={`p-mix-${k}`}
+                    label={`${c.label} · ${c.length[0]}–${c.length[1]} m`}
+                    help={`${c.description} Descarga entre ${c.moves[0]} y ${c.moves[1]} contenedores por escala.`}
+                    value={params.mix[k]}
+                    min={0}
+                    max={100}
+                    step={5}
+                    format={() => pct(params.mix[k] / mixTotal)}
+                    onChange={(v) => setMix(k, v)}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Muelle y grúas" summary={`${params.berths} muelles · ${params.cranesPerBerth} grúas · ${SHIFT_LABEL[params.craneHoursPerDay]}`}>
+          <Slider
+            id="p-berths"
+            label="Muelles habilitados"
+            help="Sitios de atraque. La terminal real tiene un frente de unos 630 m, que da para dos buques grandes; el tercero es una ampliación hipotética."
+            value={params.berths}
+            min={1}
+            max={3}
+            step={1}
+            format={String}
+            onChange={(v) => setParam('berths', v)}
+          />
+          <Slider
+            id="p-cranes"
+            label="Grúas por muelle"
+            help="Grúas pórtico (STS) que trabajan a la vez sobre un buque. Más grúas acortan la estadía, pero no entran más de cuatro por buque."
+            value={params.cranesPerBerth}
+            min={1}
+            max={4}
+            step={1}
+            format={String}
+            onChange={(v) => setParam('cranesPerBerth', v)}
+          />
+          <Slider
+            id="p-rate"
+            label="Productividad por grúa"
+            help="Contenedores que una grúa mueve por hora. Entre 20 y 30 es habitual; las más modernas superan los 35."
+            value={params.movesPerCraneHour}
+            min={15}
+            max={40}
+            step={1}
+            format={(v) => `${v} mov/h`}
+            onChange={(v) => setParam('movesPerCraneHour', v)}
+          />
+          <div>
+            <div className="mb-1 text-[12px] text-slate-600">Turnos de trabajo</div>
+            <Segmented items={[8, 16, 24] as const} value={params.craneHoursPerDay} onChange={(v) => setParam('craneHoursPerDay', v)} label={(v) => SHIFT_LABEL[v]} />
+            <p className="mt-1 text-[11px] leading-snug text-slate-500">
+              {params.craneHoursPerDay === 24 ? 'Las grúas trabajan las 24 horas.' : params.craneHoursPerDay === 16 ? 'Las grúas trabajan de 6 a 22 h.' : 'Las grúas trabajan de 8 a 16 h.'} Fuera de turno, el buque espera amarrado.
+            </p>
+          </div>
+          <Slider
+            id="p-berthing"
+            label="Tiempo para atracar"
+            help="Desde que el buque deja el fondeadero hasta que las grúas pueden empezar: práctico, remolcadores y amarre."
+            value={params.berthingH}
+            min={0.5}
+            max={4}
+            step={0.25}
+            format={hours}
+            onChange={(v) => setParam('berthingH', v)}
+          />
+          <Slider
+            id="p-unberthing"
+            label="Tiempo para desatracar"
+            help="Desde que termina la descarga hasta que el muelle queda libre para el siguiente buque."
+            value={params.unberthingH}
+            min={0.5}
+            max={3}
+            step={0.25}
+            format={hours}
+            onChange={(v) => setParam('unberthingH', v)}
+          />
+        </Section>
+
+        <Section title="Patio y camiones" summary={`${params.yardTiers} de alto · ${params.truckMovesPerHour} cont/h`}>
+          <Slider
+            id="p-tiers"
+            label="Altura de apilado"
+            help="Cuántos contenedores se apilan uno sobre otro. Más altura da más capacidad, pero en la realidad hace más lento sacar el de abajo."
+            value={params.yardTiers}
+            min={3}
+            max={5}
+            step={1}
+            format={(v) => `${v} (${(v * 720).toLocaleString('es-UY')} cont.)`}
+            onChange={(v) => setParam('yardTiers', v)}
+          />
+          <Slider
+            id="p-dwell"
+            label="Permanencia en el patio"
+            help="Horas que pasa un contenedor en el patio en promedio hasta que lo retiran (trámites, aduana, coordinación con el cliente)."
+            value={params.dwellH}
+            min={8}
+            max={72}
+            step={4}
+            format={hours}
+            onChange={(v) => setParam('dwellH', v)}
+          />
+          <Slider
+            id="p-trucks"
+            label="Retiro máximo en camión"
+            help="Tope de contenedores por hora que pueden salir por la portería. Si es bajo, el patio se llena aunque los contenedores estén listos."
+            value={params.truckMovesPerHour}
+            min={40}
+            max={200}
+            step={10}
+            format={(v) => `${v} cont/h`}
+            onChange={(v) => setParam('truckMovesPerHour', v)}
+          />
+          <Slider
+            id="p-initial"
+            label="Patio al empezar"
+            help="Ocupación del patio al inicio del escenario."
+            value={Math.round(params.initialYard * 100)}
+            min={0}
+            max={90}
+            step={5}
+            format={(v) => `${v} %`}
+            onChange={(v) => setParam('initialYard', v / 100)}
+          />
+        </Section>
+
+        <Section title="Escenario" summary={`${params.days} días · semana n.º ${params.seed}`}>
+          <Slider
+            id="p-days"
+            label="Duración"
+            help="Días simulados. Más días muestran mejor las tendencias; menos días se recorren más rápido en clase."
+            value={params.days}
+            min={3}
+            max={14}
+            step={1}
+            format={(v) => `${v} días`}
+            onChange={(v) => setParam('days', v)}
+          />
+          <div className="flex items-center justify-between gap-2 text-[12px] text-slate-600">
+            <span>Semana n.º {params.seed}</span>
+            <button
+              className="rounded-lg bg-slate-100 px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-200"
+              onClick={() => setParam('seed', 1 + Math.floor(Math.random() * 999))}
+            >
+              Otra semana al azar
+            </button>
+          </div>
+          <p className="text-[11px] leading-snug text-slate-500">
+            Misma configuración, otras llegadas. Sirve para ver cuánto cambia el resultado solo por azar.
+          </p>
+        </Section>
+      </div>
+
+      <div className="mt-4 border-t border-slate-200 pt-3">
+        <WeekChart />
       </div>
 
       <div className="mt-4 border-t border-slate-200 pt-3">
         <div className="mb-1.5 grid grid-cols-[1fr_auto_auto] gap-x-3 text-[10.5px] font-medium uppercase tracking-wide text-slate-400">
-          <span>Resultado de la semana</span>
+          <span>Resultado del período</span>
           <span className="text-right">Base</span>
           <span className="text-right">Ahora</span>
         </div>
@@ -114,10 +339,14 @@ export default function SimPanel() {
             <div key={r.label} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-3 py-0.5 text-[12px]">
               <span className="text-slate-600">{r.label}</span>
               <span className="text-right tabular-nums text-slate-400">{r.fmt(a)}</span>
-              <span className={`text-right font-semibold tabular-nums ${!diff ? 'text-slate-800' : good ? 'text-emerald-600' : 'text-rose-600'}`}>{r.fmt(b)}</span>
+              <span className={`text-right font-semibold tabular-nums ${!diff ? 'text-slate-800' : good ? 'text-emerald-700' : 'text-rose-700'}`}>
+                {diff ? (good ? '▲ ' : '▼ ') : ''}
+                {r.fmt(b)}
+              </span>
             </div>
           )
         })}
+        <p className="mt-1 text-[10.5px] text-slate-400">▲ mejor que la base · ▼ peor que la base</p>
         <div className="mt-3 flex gap-2">
           <button className="flex-1 rounded-lg bg-slate-100 px-2 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-200" onClick={resetToBase}>
             Volver a la base
@@ -127,8 +356,6 @@ export default function SimPanel() {
           </button>
         </div>
       </div>
-        </>
-      )}
     </Panel>
   )
 }

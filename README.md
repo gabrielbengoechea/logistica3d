@@ -1,56 +1,69 @@
 # Logística 3D
 
 Explorador 3D didáctico de la cadena logística, empezando por el puerto de Montevideo. El valor didáctico
-está en el **simulador**: el alumno cambia condiciones (más buques, menos grúas, un muelle cerrado) y ve en 3D
-cómo cambian las colas, la espera y el patio.
+está en el **simulador**: el alumno cambia condiciones (más buques, menos grúas, un muelle cerrado, un paro de
+camiones) y ve en 3D cómo cambian las colas, la espera y el patio.
 
-Estado: **Hito 1 en curso.** El mapa es real: relieve (Copernicus DEM), imagen satelital (Sentinel-2) y
-edificios (Overture / OpenStreetMap) del puerto de Montevideo. La terminal está en su ubicación real y con
-su frente de muelle real; el patio, las grúas, los buques y la operación son simulados.
+Todo es web: React, Three.js (React Three Fiber) y TypeScript. No hay servidor: la app es una página estática.
 
-**Hito 2 en curso:** el servicio AIS (`services/ais`) ya graba, reproduce un día, muestra el vivo y mide
-atraques, estadías y esperas para calibrar el simulador. Falta la clave de aisstream.io para tener datos reales;
-mientras tanto se prueba con un día sintético, marcado como tal en la app.
+- **Mapa real:** relieve (Copernicus DEM), imagen satelital (Sentinel-2) y edificios (Overture / OpenStreetMap).
+  La terminal está en su ubicación real y con su frente de muelle real.
+- **Operación simulada:** buques, llegadas, grúas, patio y camiones salen del simulador. Por ahora no se usan
+  datos reales de operación; la puerta queda abierta (ver `docs/datos-reales.md`).
 
-## Correr la demo
+## Correr
 
 ```bash
 pnpm install
 pnpm dev      # http://localhost:5173
-pnpm test     # pruebas del simulador
+pnpm test     # pruebas del simulador y del motor
 pnpm build    # build estática en dist/
+pnpm zone montevideo   # regenera el mapa de la zona (descarga ~1 min de datos abiertos)
 ```
 
 Se maneja con mouse o con el dedo (pizarrón): arrastrar para girar, rueda o pellizco para el zoom,
 dos dedos para desplazar. Tocar un buque, una grúa o el patio abre su ficha.
 
+## El simulador
+
+Pasos de 5 minutos, rápido de recalcular cada vez que se mueve un control. Parámetros:
+
+| Grupo | Parámetros |
+| --- | --- |
+| Llegadas | buques por día, al azar o con itinerario, mezcla de clases (Feeder, Panamax, Post-Panamax) |
+| Muelle y grúas | muelles (1 a 3), grúas por muelle, productividad, turnos (1, 2 o 3), tiempo de atraque y desatraque |
+| Patio y camiones | altura de apilado (capacidad), permanencia media, retiro máximo en camión, ocupación inicial |
+| Escenario | duración (3 a 14 días) y semana (semilla de las llegadas) |
+
+Escenarios listos para clase: semana típica, temporada alta, muelle en obra, paro de camiones, grúas nuevas,
+un solo turno y llegadas programadas. Cada uno trae su pregunta. Los resultados se comparan contra un escenario
+base, en una tabla y en un gráfico hora por hora (buques esperando y ocupación del patio).
+
+### Simplificaciones (a revisar con el perfil logístico)
+
+- Los buques solo descargan; la carga de exportación no está modelada.
+- Sin ventanas de atraque ni prioridades: el primero que llega, primero atraca.
+- El frente de muelle (~630 m, dos sitios) es el real; el muelle 3 es una ampliación hipotética.
+  Patio, grúas y productividad son típicos, no los de la terminal real.
+
 ## Cómo está armado
 
 ```
 src/
-  sim/terminalSim.ts   simulador básico (pasos de 5 min): llegadas, fondeadero, muelles, grúas, patio y camiones
-  sim/events.ts        formato de eventos común (simulador hoy, replay AIS después)
-  sim/tracks.ts        reconstruye el recorrido de cada buque a partir de los eventos
-  scene/               escena 3D con React Three Fiber: mapa real, terminal, buques, grúas, patio, camiones, escalas
-public/zones/          datos de cada zona generados por el pipeline (relieve, imagen, geometría)
-tools/pipeline/        pipeline de zona en Python (Copernicus DEM, Sentinel-2, Overture Maps)
-services/ais/          servicio AIS (FastAPI): ingesta de aisstream.io, replay, vivo y estadísticas para calibrar
-  ui/                  indicadores, panel del simulador, fichas y línea de tiempo
-tools/ais_recorder/    grabador e informe de cobertura AIS (Python)
-docs/                  borradores de pedidos de datos a ANP y SOHMA
+  sim/terminalSim.ts   simulador: llegadas, fondeadero, muelles, grúas, turnos, patio y camiones
+  sim/presets.ts       escenarios listos para clase
+  sim/events.ts        formato de eventos común (simulador hoy, datos reales después)
+  sim/tracks.ts        recorrido de cada buque a partir de los eventos
+  feeds/positions.ts   recorridos a partir de posiciones externas (la puerta para datos reales)
+  scene/               escena 3D: mapa, terminal, buques, grúas, patio, camiones, agua, cielo, escalas
+  ui/                  indicadores, panel del simulador, gráfico de la semana, fichas y línea de tiempo
+public/zones/          datos de cada zona (relieve, imagen, geometría)
+tools/zone/            script que genera los datos de una zona (TypeScript, corre con Node)
+docs/                  datos reales para el futuro y borradores de pedidos de datos
 ```
 
-El 3D es una capa sobre los datos: el simulador escribe eventos de estado (`arrive`, `berth`, `work-start`,
-`work-end`, `depart`) y el servicio AIS eventos de posición (`position`), en el mismo formato; la escena
-solo los reproduce.
-
-### Simplificaciones del simulador (a revisar con el perfil logístico)
-
-- Los buques solo descargan; la carga de exportación no está modelada.
-- Llegadas al azar (Poisson), sin ventanas de atraque ni prioridades.
-- Cada contenedor queda en promedio 20 h en el patio, con un tope de camiones por hora.
-- El frente de muelle (~630 m, dos sitios) es el real; el muelle 3 es una ampliación hipotética.
-  Patio, grúas y productividad son típicos, no los de la terminal real.
+El 3D es una capa sobre los datos: el simulador escribe eventos (`arrive`, `berth`, `work-start`,
+`work-end`, `depart`) y la escena solo los reproduce.
 
 ## Fuentes y licencias
 

@@ -1,4 +1,4 @@
-import { MANEUVER_IN_H, MANEUVER_OUT_H, type Ship, type SimResult } from './terminalSim'
+import type { Ship, SimParams, SimResult } from './terminalSim'
 
 /** Recorrido de un buque, reconstruido a partir de los eventos. Es lo que reproduce el motor 3D. */
 export interface Track {
@@ -45,16 +45,20 @@ export const PHASE_LABEL: Record<Phase, string> = {
   leaving: 'Saliendo por el canal',
 }
 
-/** Fase del buque en el instante t y avance dentro de esa fase (0 a 1). `rate` = movimientos por hora del muelle. */
-export function phaseAt(tr: Track, t: number, rate: number): { phase: Phase; u: number } {
+/** Parámetros que necesita phaseAt para estimar lo que los eventos todavía no dicen (buques que siguen en el muelle al final). */
+export type PhaseParams = Pick<SimParams, 'cranesPerBerth' | 'movesPerCraneHour' | 'berthingH' | 'unberthingH'>
+
+/** Fase del buque en el instante t y avance dentro de esa fase (0 a 1). */
+export function phaseAt(tr: Track, t: number, p: PhaseParams): { phase: Phase; u: number } {
+  const rate = p.cranesPerBerth * p.movesPerCraneHour
   if (t < tr.arrive - APPROACH_H) return { phase: 'hidden', u: 0 }
   if (t < tr.arrive) return { phase: 'approaching', u: (t - tr.arrive + APPROACH_H) / APPROACH_H }
   if (tr.berthAt === undefined || t < tr.berthAt) return { phase: 'anchored', u: 0 }
-  const ws = tr.workStart ?? tr.berthAt + MANEUVER_IN_H
+  const ws = tr.workStart ?? tr.berthAt + p.berthingH
   if (t < ws) return { phase: 'berthing', u: (t - tr.berthAt) / (ws - tr.berthAt) }
   if (tr.workEnd === undefined) return { phase: 'working', u: Math.min(0.99, ((t - ws) * rate) / tr.ship.moves) }
   if (t < tr.workEnd) return { phase: 'working', u: (t - ws) / (tr.workEnd - ws) }
-  const dep = tr.depart ?? tr.workEnd + MANEUVER_OUT_H
+  const dep = tr.depart ?? tr.workEnd + p.unberthingH
   if (t < dep) return { phase: 'unberthing', u: (t - tr.workEnd) / (dep - tr.workEnd) }
   if (t < dep + EXIT_H) return { phase: 'leaving', u: (t - dep) / EXIT_H }
   return { phase: 'hidden', u: 0 }

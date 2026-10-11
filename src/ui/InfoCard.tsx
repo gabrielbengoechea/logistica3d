@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { sampleAt } from '../sim/terminalSim'
+import { NAV_STATUS, poseAt } from '../feeds/positions'
+import { SHIP_CLASSES, cranesOnShift, sampleAt } from '../sim/terminalSim'
 import { PHASE_LABEL, phaseAt } from '../sim/tracks'
-import { NAV_STATUS, aisPoseAt } from '../ais/tracks'
-import { craneRate, useStore } from '../store'
+import { useStore } from '../store'
 import { clock, hours, num, pct } from './format'
 import Panel from './Panel'
 
@@ -36,53 +36,59 @@ function Card({ kicker, title, rows, note, children, action }: { kicker: string;
   )
 }
 
+function FollowButton({ id }: { id: string }) {
+  const follow = useStore((s) => s.follow)
+  const setFollow = useStore((s) => s.setFollow)
+  return (
+    <button
+      className={`mt-3 w-full rounded-lg px-2 py-1.5 text-[12px] font-medium ${follow === id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+      onClick={() => setFollow(follow === id ? null : id)}
+    >
+      {follow === id ? 'Dejar de seguir' : 'Seguir con la cámara'}
+    </button>
+  )
+}
+
 export default function InfoCard() {
   const selection = useStore((s) => s.selection)
   const tracks = useStore((s) => s.tracks)
+  const feedTracks = useStore((s) => s.feedTracks)
   const params = useStore((s) => s.params)
   const result = useStore((s) => s.result)
   const t = useStore((s) => s.t)
-  const follow = useStore((s) => s.follow)
-  const aisTracks = useStore((s) => s.aisTracks)
-  const source = useStore((s) => s.source)
-  const replay = useStore((s) => s.replay)
-  const setFollow = useStore((s) => s.setFollow)
   if (!selection) return null
-  const rate = craneRate(params)
+  const rate = params.cranesPerBerth * params.movesPerCraneHour
 
   if (selection.kind === 'ship') {
     const tr = tracks.find((x) => x.ship.id === selection.id)
     if (!tr) return null
-    const { phase, u } = phaseAt(tr, t, rate)
+    const { phase, u } = phaseAt(tr, t, params)
     const s = tr.ship
+    const cls = SHIP_CLASSES[s.shipClass]
     const waited = tr.berthAt !== undefined ? tr.berthAt - tr.arrive : t > tr.arrive ? t - tr.arrive : 0
-    const stay = s.moves / rate + 2.5
+    const workH = s.moves / rate
+    const paused = phase === 'working' && !cranesOnShift(t, params.craneHoursPerDay)
     const notes: Partial<Record<typeof phase, string>> = {
       anchored: 'Espera porque todos los muelles están ocupados. Cada hora en el fondeadero es tiempo y dinero perdido para la naviera.',
-      working: `Con ${params.cranesPerBerth} grúas a ${params.movesPerCraneHour} movimientos por hora, descargarlo lleva unas ${num(s.moves / rate)} horas.`,
+      working: paused
+        ? 'Las grúas están fuera de turno: el buque espera amarrado hasta que vuelvan a trabajar.'
+        : `Con ${params.cranesPerBerth} grúas a ${params.movesPerCraneHour} movimientos por hora, descargarlo lleva unas ${num(workH)} horas de trabajo.`,
     }
     return (
       <Card
-        kicker={`Portacontenedores · ${s.id}`}
+        kicker={`${cls.label} · ${s.id}`}
         title={s.name}
         rows={[
-          ['Estado', PHASE_LABEL[phase]],
+          ['Estado', paused ? 'Amarrado, grúas fuera de turno' : PHASE_LABEL[phase]],
           ['Eslora', `${s.length} m`],
           ['Manga', `${s.beam} m`],
           ['Contenedores a descargar', String(s.moves)],
-          ['Llegó al fondeadero', t >= tr.arrive ? clock(tr.arrive) : '—'],
-          [tr.berthAt !== undefined ? 'Esperó' : 'Lleva esperando', hours(waited)],
-          ['Estadía en muelle estimada', hours(stay)],
+          ['Llegó al fondeadero', t >= tr.arrive ? clock(Math.max(0, tr.arrive)) : '—'],
+          [tr.berthAt !== undefined ? 'Esperó' : 'Lleva esperando', hours(Math.max(0, waited))],
+          ['Trabajo de grúas', hours(workH)],
         ]}
-        note={notes[phase] ?? `Mide ${num(s.length / PITCH_M)} canchas del Centenario de largo.`}
-        action={
-          <button
-            className={`mt-3 w-full rounded-lg px-2 py-1.5 text-[12px] font-medium ${follow === s.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-            onClick={() => setFollow(follow === s.id ? null : s.id)}
-          >
-            {follow === s.id ? 'Dejar de seguir' : 'Seguir con la cámara'}
-          </button>
-        }
+        note={notes[phase] ?? `${cls.description} Mide ${num(s.length / PITCH_M)} canchas del Centenario de largo.`}
+        action={<FollowButton id={s.id} />}
       >
         {phase === 'working' && (
           <div className="mt-2">
@@ -99,52 +105,40 @@ export default function InfoCard() {
     )
   }
 
-  if (selection.kind === 'ais') {
-    const tr = aisTracks.find((x) => x.ship.id === selection.id)
+  if (selection.kind === 'feed') {
+    const tr = feedTracks.find((x) => x.ship.id === selection.id)
     if (!tr) return null
     const s = tr.ship
-    const p = aisPoseAt(tr, t)
-    const synthetic = source === 'replay' && replay?.synthetic
+    const p = poseAt(tr, t)
     return (
       <Card
-        kicker={`${s.type} · MMSI ${s.mmsi}`}
+        kicker={`${s.type} · datos externos`}
         title={s.name}
         rows={[
-          ['Estado AIS', p.status != null ? (NAV_STATUS[p.status] ?? `Código ${p.status}`) : 'Sin dato'],
+          ['Estado', p.status != null ? (NAV_STATUS[p.status] ?? `Código ${p.status}`) : 'Sin dato'],
           ['Velocidad', p.sog != null ? `${num(p.sog)} nudos` : 'Sin dato'],
           ['Eslora', s.length ? `${s.length} m` : 'Sin dato'],
           ['Manga', s.beam ? `${s.beam} m` : 'Sin dato'],
-          ['Destino declarado', s.destination ?? 'Sin dato'],
+          ['Destino', s.destination ?? 'Sin dato'],
           ['Último reporte', p.visible ? `hace ${Math.round(p.age * 60)} min` : 'sin reportes recientes'],
         ]}
-        note={
-          synthetic
-            ? 'Buque sintético de prueba: no existe. Sirve para verificar el sistema antes de tener datos reales.'
-            : s.length
-              ? `Mide ${num(s.length / PITCH_M)} canchas del Centenario de largo, según lo que informa su propio equipo AIS.`
-              : 'Este buque no informa sus dimensiones por AIS: se dibuja con un tamaño genérico.'
-        }
-        action={
-          <button
-            className={`mt-3 w-full rounded-lg px-2 py-1.5 text-[12px] font-medium ${follow === s.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-            onClick={() => setFollow(follow === s.id ? null : s.id)}
-          >
-            {follow === s.id ? 'Dejar de seguir' : 'Seguir con la cámara'}
-          </button>
-        }
+        note={s.length ? `Mide ${num(s.length / PITCH_M)} canchas del Centenario de largo.` : 'La fuente no informa sus dimensiones: se dibuja con un tamaño genérico.'}
+        action={<FollowButton id={s.id} />}
       />
     )
   }
 
   if (selection.kind === 'crane') {
-    const working = tracks.some((tr) => tr.berth === selection.berth && phaseAt(tr, t, rate).phase === 'working')
+    const onShift = cranesOnShift(t, params.craneHoursPerDay)
+    const busy = tracks.some((tr) => tr.berth === selection.berth && phaseAt(tr, t, params).phase === 'working')
     return (
       <Card
         kicker={`Muelle ${selection.berth + 1} · grúa ${selection.index + 1}`}
         title="Grúa pórtico de muelle (STS)"
         rows={[
-          ['Estado', working ? 'Descargando un buque' : 'Sin buque'],
+          ['Estado', !onShift ? 'Fuera de turno' : busy ? 'Descargando un buque' : 'Sin buque'],
           ['Productividad', `${params.movesPerCraneHour} mov/h`],
+          ['Turnos', params.craneHoursPerDay === 24 ? '24 h' : params.craneHoursPerDay === 16 ? '6 a 22 h' : '8 a 16 h'],
           ['Altura (típica)', '≈ 50 m'],
           ['Alcance sobre el agua (típico)', '≈ 55 m'],
         ]}
@@ -160,8 +154,9 @@ export default function InfoCard() {
       title="Patio de contenedores"
       rows={[
         ['Ocupación ahora', pct(now.yard / result.yardCapacity)],
-        ['Capacidad en esta maqueta', `${result.yardCapacity} contenedores`],
-        ['Retiro en camión', `${params.truckMovesPerHour} cont/h`],
+        ['Capacidad', `${result.yardCapacity.toLocaleString('es-UY')} contenedores (${params.yardTiers} de alto)`],
+        ['Permanencia media', hours(params.dwellH)],
+        ['Retiro máximo en camión', `${params.truckMovesPerHour} cont/h`],
         ['Grúas frenadas por patio lleno', hours(result.kpis.hoursYardFull)],
       ]}
       note="Si el patio se llena, las grúas no tienen dónde dejar la carga y frenan: un problema en tierra demora a los buques en el agua."

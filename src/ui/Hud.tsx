@@ -1,29 +1,9 @@
 import InfoCard from './InfoCard'
-import AisKpis from './AisKpis'
 import Kpis from './Kpis'
 import Panel from './Panel'
 import SimPanel from './SimPanel'
 import TimeBar from './TimeBar'
 import { useStore } from '../store'
-
-function SourceKpis() {
-  const source = useStore((s) => s.source)
-  return source === 'sim' ? <Kpis /> : <AisKpis />
-}
-
-function SourceBadge() {
-  const source = useStore((s) => s.source)
-  const replay = useStore((s) => s.replay)
-  const [text, tone] =
-    source === 'sim'
-      ? ['Mapa real · operación simulada', 'bg-amber-100 text-amber-800']
-      : source === 'live'
-        ? ['AIS en vivo', 'bg-emerald-100 text-emerald-800']
-        : replay?.synthetic
-          ? ['AIS de prueba · sintético, no real', 'bg-rose-100 text-rose-800']
-          : ['AIS real · día guardado', 'bg-emerald-100 text-emerald-800']
-  return <span className={`ml-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${tone}`}>{text}</span>
-}
 
 function Loading() {
   const ready = useStore((s) => s.zoneReady)
@@ -48,9 +28,9 @@ export default function Hud() {
               <div className="text-sm font-semibold leading-tight text-slate-800">Logística 3D</div>
               <div className="text-[11.5px] leading-tight text-slate-500">Puerto de Montevideo</div>
             </div>
-            <SourceBadge />
+            <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800">Mapa real · operación simulada</span>
           </Panel>
-          <SourceKpis />
+          <Kpis />
         </div>
         <SimPanel />
       </div>
