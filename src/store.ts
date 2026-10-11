@@ -18,6 +18,9 @@ interface State {
   speed: number
   selection: Selection
   view: View
+  /** Buque que sigue la cámara (id), o null. */
+  follow: string | null
+  zoneReady: boolean
   setParam: <K extends keyof SimParams>(key: K, value: SimParams[K]) => void
   saveBase: () => void
   resetToBase: () => void
@@ -26,6 +29,8 @@ interface State {
   setSpeed: (speed: number) => void
   select: (s: Selection) => void
   setView: (v: View) => void
+  setFollow: (id: string | null) => void
+  setZoneReady: (ready: boolean) => void
   advance: (dtSeconds: number) => void
 }
 
@@ -44,14 +49,18 @@ export const useStore = create<State>()((set, get) => ({
   speed: 1,
   selection: null,
   view: 'terminal',
+  follow: null,
+  zoneReady: false,
   setParam: (key, value) => set(run({ ...get().params, [key]: value })),
   saveBase: () => set({ base: get().result }),
   resetToBase: () => set(run(get().base.params)),
   setT: (t) => set({ t }),
   togglePlay: () => set({ playing: !get().playing }),
   setSpeed: (speed) => set({ speed }),
-  select: (selection) => set({ selection }),
-  setView: (view) => set({ view }),
+  select: (selection) => set({ selection, follow: selection?.kind === 'ship' && selection.id === get().follow ? get().follow : null }),
+  setView: (view) => set({ view, follow: null }),
+  setFollow: (follow) => set({ follow }),
+  setZoneReady: (zoneReady) => set({ zoneReady }),
   advance: (dt) => {
     const s = get()
     if (!s.playing) return

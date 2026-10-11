@@ -7,10 +7,10 @@ import Panel from './Panel'
 
 const PITCH_M = 105
 
-function Card({ kicker, title, rows, note, children }: { kicker: string; title: string; rows: [string, string][]; note: string; children?: ReactNode }) {
+function Card({ kicker, title, rows, note, children, action }: { kicker: string; title: string; rows: [string, string][]; note: string; children?: ReactNode; action?: ReactNode }) {
   const select = useStore((s) => s.select)
   return (
-    <Panel className="w-[300px] p-4">
+    <Panel className="w-full p-4 sm:w-[300px]">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-[10.5px] font-semibold uppercase tracking-wide text-blue-600">{kicker}</div>
@@ -30,6 +30,7 @@ function Card({ kicker, title, rows, note, children }: { kicker: string; title: 
         ))}
       </dl>
       <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-900">{note}</p>
+      {action}
     </Panel>
   )
 }
@@ -40,6 +41,8 @@ export default function InfoCard() {
   const params = useStore((s) => s.params)
   const result = useStore((s) => s.result)
   const t = useStore((s) => s.t)
+  const follow = useStore((s) => s.follow)
+  const setFollow = useStore((s) => s.setFollow)
   if (!selection) return null
   const rate = craneRate(params)
 
@@ -68,6 +71,14 @@ export default function InfoCard() {
           ['Estadía en muelle estimada', hours(stay)],
         ]}
         note={notes[phase] ?? `Mide ${num(s.length / PITCH_M)} canchas del Centenario de largo.`}
+        action={
+          <button
+            className={`mt-3 w-full rounded-lg px-2 py-1.5 text-[12px] font-medium ${follow === s.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            onClick={() => setFollow(follow === s.id ? null : s.id)}
+          >
+            {follow === s.id ? 'Dejar de seguir' : 'Seguir con la cámara'}
+          </button>
+        }
       >
         {phase === 'working' && (
           <div className="mt-2">

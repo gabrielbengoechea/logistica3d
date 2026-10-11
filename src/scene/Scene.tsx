@@ -10,7 +10,9 @@ import TerminalPad from './TerminalPad'
 import Trucks from './Trucks'
 import World from './World'
 import Yard from './Yard'
+import { shipPose } from './pose'
 import { useZone } from './zone'
+import { craneRate } from '../store'
 
 const fromTerminal = (x: number, y: number, z: number): [number, number, number] => {
   const [wx, wz] = toWorld(x, z)
@@ -30,10 +32,25 @@ function Clock() {
   return null
 }
 
+/** Mientras hay un buque seguido, la cámara mantiene su ángulo y desplaza el punto mirado hasta el buque. */
+function Follow({ controls }: { controls: React.RefObject<CameraControls | null> }) {
+  useFrame(() => {
+    const { follow, tracks, t, params } = useStore.getState()
+    if (!follow || !controls.current) return
+    const tr = tracks.find((x) => x.ship.id === follow)
+    if (!tr) return
+    const p = shipPose(tr, t, craneRate(params))
+    if (p.phase !== 'hidden') controls.current.moveTo(p.x, 10, p.z, true)
+  })
+  return null
+}
+
 export default function Scene() {
   const controls = useRef<CameraControls>(null)
   const view = useStore((s) => s.view)
   const zone = useZone('montevideo')
+  const setZoneReady = useStore((s) => s.setZoneReady)
+  useEffect(() => setZoneReady(zone !== null), [zone, setZoneReady])
 
   useEffect(() => {
     const [px, py, pz, tx, ty, tz] = VIEWS[view]
@@ -48,6 +65,7 @@ export default function Scene() {
       <directionalLight position={[800, 1500, 600]} intensity={1.5} />
       <CameraControls ref={controls} minDistance={60} maxDistance={16000} maxPolarAngle={1.35} />
       <Clock />
+      <Follow controls={controls} />
       {zone && <World zone={zone} />}
       <group position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
         <TerminalPad />

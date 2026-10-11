@@ -39,7 +39,7 @@ export default function SimPanel() {
     )
 
   return (
-    <Panel className="max-h-[calc(100vh-190px)] w-[320px] overflow-y-auto p-4">
+    <Panel className="max-h-[48vh] w-full overflow-y-auto p-4 sm:max-h-[calc(100vh-190px)] sm:w-[320px]">
       <div className="mb-1 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-800">Simulador</h2>
         <button className="text-xs text-slate-400 hover:text-slate-600" onClick={() => setOpen(false)}>
