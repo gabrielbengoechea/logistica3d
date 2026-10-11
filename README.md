@@ -6,7 +6,11 @@ cómo cambian las colas, la espera y el patio.
 
 Estado: **Hito 1 en curso.** El mapa es real: relieve (Copernicus DEM), imagen satelital (Sentinel-2) y
 edificios (Overture / OpenStreetMap) del puerto de Montevideo. La terminal está en su ubicación real y con
-su frente de muelle real; el patio, las grúas, los buques y la operación son simulados. El AIS llega en el Hito 2.
+su frente de muelle real; el patio, las grúas, los buques y la operación son simulados.
+
+**Hito 2 en curso:** el servicio AIS (`services/ais`) ya graba, reproduce un día, muestra el vivo y mide
+atraques, estadías y esperas para calibrar el simulador. Falta la clave de aisstream.io para tener datos reales;
+mientras tanto se prueba con un día sintético, marcado como tal en la app.
 
 ## Correr la demo
 
@@ -30,13 +34,15 @@ src/
   scene/               escena 3D con React Three Fiber: mapa real, terminal, buques, grúas, patio, camiones, escalas
 public/zones/          datos de cada zona generados por el pipeline (relieve, imagen, geometría)
 tools/pipeline/        pipeline de zona en Python (Copernicus DEM, Sentinel-2, Overture Maps)
+services/ais/          servicio AIS (FastAPI): ingesta de aisstream.io, replay, vivo y estadísticas para calibrar
   ui/                  indicadores, panel del simulador, fichas y línea de tiempo
 tools/ais_recorder/    grabador e informe de cobertura AIS (Python)
 docs/                  borradores de pedidos de datos a ANP y SOHMA
 ```
 
-El 3D es una capa sobre los datos: el simulador escribe eventos (`arrive`, `berth`, `work-start`,
-`work-end`, `depart`) y la escena solo los reproduce. El replay AIS va a escribir el mismo formato.
+El 3D es una capa sobre los datos: el simulador escribe eventos de estado (`arrive`, `berth`, `work-start`,
+`work-end`, `depart`) y el servicio AIS eventos de posición (`position`), en el mismo formato; la escena
+solo los reproduce.
 
 ### Simplificaciones del simulador (a revisar con el perfil logístico)
 

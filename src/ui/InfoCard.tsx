@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { sampleAt } from '../sim/terminalSim'
 import { PHASE_LABEL, phaseAt } from '../sim/tracks'
+import { NAV_STATUS, aisPoseAt } from '../ais/tracks'
 import { craneRate, useStore } from '../store'
 import { clock, hours, num, pct } from './format'
 import Panel from './Panel'
@@ -42,6 +43,9 @@ export default function InfoCard() {
   const result = useStore((s) => s.result)
   const t = useStore((s) => s.t)
   const follow = useStore((s) => s.follow)
+  const aisTracks = useStore((s) => s.aisTracks)
+  const source = useStore((s) => s.source)
+  const replay = useStore((s) => s.replay)
   const setFollow = useStore((s) => s.setFollow)
   if (!selection) return null
   const rate = craneRate(params)
@@ -92,6 +96,43 @@ export default function InfoCard() {
           </div>
         )}
       </Card>
+    )
+  }
+
+  if (selection.kind === 'ais') {
+    const tr = aisTracks.find((x) => x.ship.id === selection.id)
+    if (!tr) return null
+    const s = tr.ship
+    const p = aisPoseAt(tr, t)
+    const synthetic = source === 'replay' && replay?.synthetic
+    return (
+      <Card
+        kicker={`${s.type} · MMSI ${s.mmsi}`}
+        title={s.name}
+        rows={[
+          ['Estado AIS', p.status != null ? (NAV_STATUS[p.status] ?? `Código ${p.status}`) : 'Sin dato'],
+          ['Velocidad', p.sog != null ? `${num(p.sog)} nudos` : 'Sin dato'],
+          ['Eslora', s.length ? `${s.length} m` : 'Sin dato'],
+          ['Manga', s.beam ? `${s.beam} m` : 'Sin dato'],
+          ['Destino declarado', s.destination ?? 'Sin dato'],
+          ['Último reporte', p.visible ? `hace ${Math.round(p.age * 60)} min` : 'sin reportes recientes'],
+        ]}
+        note={
+          synthetic
+            ? 'Buque sintético de prueba: no existe. Sirve para verificar el sistema antes de tener datos reales.'
+            : s.length
+              ? `Mide ${num(s.length / PITCH_M)} canchas del Centenario de largo, según lo que informa su propio equipo AIS.`
+              : 'Este buque no informa sus dimensiones por AIS: se dibuja con un tamaño genérico.'
+        }
+        action={
+          <button
+            className={`mt-3 w-full rounded-lg px-2 py-1.5 text-[12px] font-medium ${follow === s.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            onClick={() => setFollow(follow === s.id ? null : s.id)}
+          >
+            {follow === s.id ? 'Dejar de seguir' : 'Seguir con la cámara'}
+          </button>
+        }
+      />
     )
   }
 

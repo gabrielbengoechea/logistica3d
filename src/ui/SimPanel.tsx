@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { Kpis, SimParams } from '../sim/terminalSim'
-import { useStore } from '../store'
+import { aisApiBase } from '../ais/api'
+import { useStore, type Source } from '../store'
+import DataPanel from './DataPanel'
 import { hours, num, pct } from './format'
 import Panel from './Panel'
 
@@ -28,6 +30,9 @@ export default function SimPanel() {
   const setParam = useStore((s) => s.setParam)
   const saveBase = useStore((s) => s.saveBase)
   const resetToBase = useStore((s) => s.resetToBase)
+  const source = useStore((s) => s.source)
+  const setSource = useStore((s) => s.setSource)
+  const hasAis = aisApiBase() !== null
 
   if (!open)
     return (
@@ -41,11 +46,34 @@ export default function SimPanel() {
   return (
     <Panel className="max-h-[48vh] w-full overflow-y-auto p-4 sm:max-h-[calc(100vh-190px)] sm:w-[320px]">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-800">Simulador</h2>
+        <h2 className="text-sm font-semibold text-slate-800">{source === 'sim' ? 'Simulador' : 'Datos AIS'}</h2>
         <button className="text-xs text-slate-400 hover:text-slate-600" onClick={() => setOpen(false)}>
           ocultar
         </button>
       </div>
+      {hasAis && (
+        <div className="mb-3 flex rounded-lg bg-slate-100 p-0.5">
+          {(
+            [
+              ['sim', 'Simulación'],
+              ['replay', 'AIS · día'],
+              ['live', 'AIS · vivo'],
+            ] as [Source, string][]
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setSource(k)}
+              className={`flex-1 rounded-md px-2 py-1 text-[12px] font-medium ${source === k ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {source !== 'sim' ? (
+        <DataPanel />
+      ) : (
+        <>
       <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-[12px] leading-snug text-blue-900">
         <b>Antes de mover un control, predecí:</b> si llegan 3,5 buques por día en vez de 2,5, ¿cuánto crece la espera? ¿Y si sumás un muelle?
       </p>
@@ -99,6 +127,8 @@ export default function SimPanel() {
           </button>
         </div>
       </div>
+        </>
+      )}
     </Panel>
   )
 }

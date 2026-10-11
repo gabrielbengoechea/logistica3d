@@ -35,9 +35,10 @@ function Crane({ berth, index, x }: { berth: number; index: number; x: number })
   const frame = selected ? '#1d4ed8' : FRAME
 
   useFrame((_, delta) => {
-    const { tracks, t, params, playing } = useStore.getState()
+    const { tracks, t, params, playing, source } = useStore.getState()
     const rate = craneRate(params)
-    const working = tracks.some((tr) => tr.berth === berth && phaseAt(tr, t, rate).phase === 'working')
+    // Con datos AIS no se conoce la operación de las grúas: quedan quietas.
+    const working = source === 'sim' && tracks.some((tr) => tr.berth === berth && phaseAt(tr, t, rate).phase === 'working')
     if (playing && working) clock.current += delta * 0.22
     // Ciclo: baja en el buque, sube, viaja a tierra, baja, sube y vuelve.
     const c = clock.current % 1

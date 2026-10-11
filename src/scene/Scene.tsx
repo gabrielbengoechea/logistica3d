@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { CameraControls } from '@react-three/drei'
 import { useStore, type View } from '../store'
+import AisShips from './AisShips'
 import Cranes from './Cranes'
+import { aisPoseAt } from '../ais/tracks'
 import { TERMINAL, toWorld } from './layout'
 import ScaleComparison, { SCALE_AT } from './ScaleComparison'
 import Ships from './Ships'
@@ -35,12 +37,17 @@ function Clock() {
 /** Mientras hay un buque seguido, la cámara mantiene su ángulo y desplaza el punto mirado hasta el buque. */
 function Follow({ controls }: { controls: React.RefObject<CameraControls | null> }) {
   useFrame(() => {
-    const { follow, tracks, t, params } = useStore.getState()
+    const { follow, tracks, aisTracks, source, t, params } = useStore.getState()
     if (!follow || !controls.current) return
-    const tr = tracks.find((x) => x.ship.id === follow)
-    if (!tr) return
-    const p = shipPose(tr, t, craneRate(params))
-    if (p.phase !== 'hidden') controls.current.moveTo(p.x, 10, p.z, true)
+    if (source === 'sim') {
+      const tr = tracks.find((x) => x.ship.id === follow)
+      const p = tr && shipPose(tr, t, craneRate(params))
+      if (p && p.phase !== 'hidden') controls.current.moveTo(p.x, 10, p.z, true)
+    } else {
+      const tr = aisTracks.find((x) => x.ship.id === follow)
+      const p = tr && aisPoseAt(tr, t)
+      if (p && p.visible) controls.current.moveTo(p.x, 10, p.z, true)
+    }
   })
   return null
 }
@@ -74,6 +81,7 @@ export default function Scene() {
         <Trucks />
       </group>
       <Ships />
+      <AisShips />
       <ScaleComparison />
     </>
   )

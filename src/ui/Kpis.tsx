@@ -3,7 +3,7 @@ import { useStore } from '../store'
 import { hours, pct } from './format'
 import Panel from './Panel'
 
-function Kpi({ label, value, hint, warn }: { label: string; value: string; hint: string; warn?: boolean }) {
+export function Kpi({ label, value, hint, warn }: { label: string; value: string; hint: string; warn?: boolean }) {
   return (
     <Panel className="min-w-0 px-2.5 py-1.5 sm:min-w-[132px] sm:px-3.5 sm:py-2.5">
       <div className="truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">{label}</div>

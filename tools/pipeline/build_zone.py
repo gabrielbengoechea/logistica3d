@@ -40,6 +40,8 @@ class Zone:
     origin: tuple[float, float]
     sentinel_scene: str
     dem_tile: str
+    # Ubicación de la terminal en metros locales (x, z, giro en radianes) y largo del frente de muelle.
+    terminal: tuple[float, float, float, float] | None = None
     epsg: int = 32721
     dem_res: float = 30.0
     image_res: float = 10.0
@@ -53,6 +55,8 @@ ZONES = {
         origin=(-56.2125, -34.9015),
         sentinel_scene="S2B_21HWB_20260208_1_L2A",
         dem_tile="Copernicus_DSM_COG_10_S35_00_W057_00_DEM",
+        # Frente de muelle de la terminal de contenedores, medido sobre la imagen Sentinel-2.
+        terminal=(-685.0, 317.0, 0.511, 630.0),
     ),
 }
 
@@ -308,6 +312,9 @@ def main() -> None:
     meta_path = out / "zone.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
     meta.update({"name": zone.name, "origin": zone.origin, "epsg": zone.epsg, "extent": local.extent()})
+    if zone.terminal:
+        x, z, yaw, quay = zone.terminal
+        meta["terminal"] = {"x": x, "z": z, "yaw": yaw, "quayLength": quay}
     if "terrain" in steps:
         meta["terrain"] = build_terrain(zone, local, out)
     if "imagery" in steps:

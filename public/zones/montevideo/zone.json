@@ -30,5 +30,11 @@
   "vectors": {
     "file": "vectors.json",
     "source": "Overture Maps (incluye datos de OpenStreetMap, ODbL)"
+  },
+  "terminal": {
+    "x": -685.0,
+    "z": 317.0,
+    "yaw": 0.511,
+    "quayLength": 630.0
   }
 }
