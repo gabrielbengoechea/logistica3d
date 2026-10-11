@@ -12,11 +12,11 @@
     "zmax": 8213.5
   },
   "terrain": {
-    "file": "terrain.bin",
+    "file": "terrain.png",
+    "encoding": "terrarium",
     "cols": 582,
     "rows": 448,
     "res": 30.0,
-    "unit": "dm",
     "min": -3.0,
     "max": 133.42306518554688
   },

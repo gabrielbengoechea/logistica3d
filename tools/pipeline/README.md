@@ -4,7 +4,7 @@ Prepara una zona para el explorador 3D y la deja en `public/zones/<zona>/`:
 
 | Archivo | Qué es | Fuente |
 | --- | --- | --- |
-| `terrain.bin` | Relieve, enteros de 16 bits en decímetros, filas de norte a sur | Copernicus DEM GLO-30 (~30 m) |
+| `terrain.png` | Relieve en PNG con codificación Terrarium (altura = R·256 + G + B/256 − 32768 m), filas de norte a sur | Copernicus DEM GLO-30 (~30 m) |
 | `imagery.jpg` | Imagen satelital color verdadero, 10 m por píxel | Copernicus Sentinel-2 L2A, una escena sin nubes |
 | `vectors.json` | Edificios con altura, muelles y escolleras, calles principales, vías | Overture Maps (incluye OpenStreetMap, ODbL) |
 | `zone.json` | Extensión, resolución, fuentes y archivos | — |

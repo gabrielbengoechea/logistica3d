@@ -131,10 +131,17 @@ def build_terrain(zone: Zone, local: Local, out: Path) -> dict:
     h = warp_to_grid(url, local, zone.dem_res, zone.epsg)[0]
     # En el DEM el agua queda cerca de 0 m. La bajamos un poco para que quede bajo el plano de agua.
     h = np.where(h < 0.5, -3.0, h)
-    dm = np.clip(np.round(h * 10), -32768, 32767).astype("<i2")
-    (out / "terrain.bin").write_bytes(dm.tobytes())
-    print(f"relieve: {dm.shape[1]}x{dm.shape[0]} celdas, {h.min():.1f} a {h.max():.1f} m")
-    return {"file": "terrain.bin", "cols": int(dm.shape[1]), "rows": int(dm.shape[0]), "res": zone.dem_res, "unit": "dm", "min": float(h.min()), "max": float(h.max())}
+    # Codificación Terrarium (PNG RGB): altura = R*256 + G + B/256 - 32768. Precisión de ~4 mm.
+    v = np.clip(h + 32768.0, 0, 65535.996)
+    r = np.floor(v / 256)
+    g = np.floor(v - r * 256)
+    b = np.floor((v - r * 256 - g) * 256)
+    Image.fromarray(np.stack([r, g, b], axis=-1).astype(np.uint8), "RGB").save(out / "terrain.png", optimize=True)
+    old = out / "terrain.bin"
+    if old.exists():
+        old.unlink()
+    print(f"relieve: {h.shape[1]}x{h.shape[0]} celdas, {h.min():.1f} a {h.max():.1f} m")
+    return {"file": "terrain.png", "encoding": "terrarium", "cols": int(h.shape[1]), "rows": int(h.shape[0]), "res": zone.dem_res, "min": float(h.min()), "max": float(h.max())}
 
 
 def build_imagery(zone: Zone, local: Local, out: Path) -> dict:
