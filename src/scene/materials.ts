@@ -179,37 +179,3 @@ export function getHaloTexture(): THREE.CanvasTexture {
   halo.colorSpace = THREE.SRGBColorSpace
   return halo
 }
-
-let foam: THREE.CanvasTexture | null = null
-
-/**
- * Estela de un buque vista desde arriba: x = 0 en la popa y se aleja hacia x = 1, y abre en V.
- * Blanca con transparencia; se desvanece a lo lejos.
- */
-export function getWakeTexture(): THREE.CanvasTexture {
-  if (foam) return foam
-  const W = 512
-  const H = 256
-  const c = document.createElement('canvas')
-  c.width = W
-  c.height = H
-  const g = c.getContext('2d')!
-  let seed = 5
-  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
-  for (let i = 0; i < 5000; i++) {
-    const u = rand() ** 0.8
-    const fade = (1 - u) ** 1.6
-    // Tres bandas: el centro revuelto por la hélice y los dos brazos de la V.
-    const arm = rand()
-    const spread = 0.06 + u * 0.42
-    const v = arm < 0.45 ? 0.5 + (rand() - 0.5) * (0.05 + u * 0.12) : 0.5 + (arm < 0.72 ? -1 : 1) * spread + (rand() - 0.5) * 0.04
-    const r = 1 + rand() * 3.5 * (0.4 + u)
-    g.fillStyle = `rgba(255,255,255,${(0.08 + rand() * 0.22) * fade})`
-    g.beginPath()
-    g.arc(u * W, v * H, r, 0, Math.PI * 2)
-    g.fill()
-  }
-  foam = new THREE.CanvasTexture(c)
-  foam.colorSpace = THREE.SRGBColorSpace
-  return foam
-}

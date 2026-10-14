@@ -107,7 +107,7 @@ const FACADES = ['#efe9df', '#e6dfd2', '#dcd6cc', '#f4f0e9', '#d8cfbf', '#e9dcc8
 )
 
 /** Material de los edificios: ventanas dibujadas en las fachadas y, de noche, algunas encendidas. */
-function buildingMaterial() {
+export function buildingMaterial() {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = SHARED.uNight

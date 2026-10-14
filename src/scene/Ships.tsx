@@ -7,11 +7,12 @@ import type { Track } from '../sim/tracks'
 import { useStore } from '../store'
 import { CONTAINER_COLORS } from './layout'
 import { LAND_Y } from './layout'
-import { getContainerTexture, getWakeTexture, strut } from './materials'
+import { getContainerTexture, strut } from './materials'
 import { useGlowMaterial } from './useGlow'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { shipPose } from './pose'
 import Tag from './Tag'
+import Wake from './Wake'
 
 const HULL_H = 13
 const FUNNEL_COLORS = ['#c94a3d', '#1f6fb5', '#e8a33b', '#2e8b57', '#f8fafc']
@@ -49,6 +50,9 @@ export default function Ships() {
       {tracks.map((tr) => (
         <Ship key={tr.ship.id} track={tr} />
       ))}
+      {tracks.map((tr) => (
+        <Wake key={tr.ship.id} track={tr} />
+      ))}
     </>
   )
 }
@@ -59,21 +63,12 @@ function Ship({ track }: { track: Track }) {
   const tag = useRef<HTMLDivElement>(null)
   const tugs = useRef<THREE.Group>(null)
   const lines = useRef<THREE.Mesh>(null)
-  const wakeOpacity = useRef(0)
   const { length: L, beam: B, id, name } = track.ship
   const select = useStore((s) => s.select)
   const selected = useStore((s) => s.selection?.kind === 'ship' && s.selection.id === id)
-  const wake = useMemo(() => {
-    const map = getWakeTexture().clone()
-    // La textura empieza en la popa (u = 0) y se aleja hacia atrás (-x del buque).
-    map.repeat.set(-1, 1)
-    map.offset.set(1, 0)
-    map.needsUpdate = true
-    return new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, opacity: 0 })
-  }, [])
   const mooring = useMemo(() => mooringLines(L, B), [L, B])
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     const { t, params } = useStore.getState()
     const pose = shipPose(track, t, params)
     const g = group.current!
@@ -87,13 +82,7 @@ function Ship({ track }: { track: Track }) {
     const m = cargo.current
     if (m) m.count = Math.round((m.userData.total as number) * pose.load)
 
-    // Estela según la maniobra: navegando, fuerte; empujado por remolcadores, apenas; quieto, nada.
     const { phase, u } = pose
-    const target =
-      phase === 'approaching' || phase === 'leaving' ? 0.9 : phase === 'berthing' ? (u < 0.7 ? 0.75 : 0.12) : phase === 'unberthing' ? (u > 0.5 ? 0.35 : 0.1) : 0
-    wakeOpacity.current += (target - wakeOpacity.current) * Math.min(1, delta * 2.5)
-    wake.opacity = wakeOpacity.current
-    wake.visible = wake.opacity > 0.01
     if (tugs.current) tugs.current.visible = (phase === 'berthing' && u > 0.55) || (phase === 'unberthing' && u < 0.7)
     if (lines.current) lines.current.visible = phase === 'working' || (phase === 'berthing' && u > 0.92) || (phase === 'unberthing' && u < 0.12)
   })
@@ -107,9 +96,6 @@ function Ship({ track }: { track: Track }) {
       }}
     >
       <ShipBody length={L} beam={B} seed={track.index + 1} selected={selected} label={selected ? `${id} · ${name}` : id} cargoRef={cargo} tagRef={tag} />
-      <mesh rotation-x={-Math.PI / 2} position={[-L / 2 - L * 1.4, 0.55, 0]} material={wake} renderOrder={2}>
-        <planeGeometry args={[L * 2.8, B * 3.2]} />
-      </mesh>
       <mesh ref={lines} geometry={mooring} visible={false}>
         <meshStandardMaterial color="#3a3a36" roughness={0.9} />
       </mesh>
@@ -214,6 +200,7 @@ export function ShipBody({
   selected,
   label,
   cargo = true,
+  tag = true,
   cargoRef,
   tagRef,
 }: {
@@ -223,6 +210,8 @@ export function ShipBody({
   selected: boolean
   label: string
   cargo?: boolean
+  /** Mostrar la etiqueta sobre el buque (el comparador de escalas pone las suyas). */
+  tag?: boolean
   cargoRef?: React.RefObject<THREE.InstancedMesh | null>
   tagRef?: React.Ref<HTMLDivElement>
 }) {
@@ -331,11 +320,13 @@ export function ShipBody({
           <Edges color="#2563eb" />
         </mesh>
       )}
-      <Html position={[0, 48, 0]} center zIndexRange={[20, 0]}>
-        <div ref={tagRef}>
-          <Tag tone={selected ? 'accent' : 'plain'}>{label}</Tag>
-        </div>
-      </Html>
+      {tag && (
+        <Html position={[0, 48, 0]} center zIndexRange={[20, 0]}>
+          <div ref={tagRef}>
+            <Tag tone={selected ? 'accent' : 'plain'}>{label}</Tag>
+          </div>
+        </Html>
+      )}
     </>
   )
 }

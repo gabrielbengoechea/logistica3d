@@ -1,5 +1,6 @@
 import InfoCard from './InfoCard'
 import Kpis from './Kpis'
+import NavPad from './NavPad'
 import Panel from './Panel'
 import SimPanel from './SimPanel'
 import TimeBar from './TimeBar'
@@ -39,6 +40,7 @@ export default function Hud() {
           </Panel>
           <TourButtons />
           {!touring && <Kpis />}
+          <NavPad />
         </div>
         {/* Durante un recorrido el panel se oculta para despejar la vista, sin perder lo que estaba abierto. */}
         <div className={touring ? 'hidden' : 'contents'}>

@@ -3,7 +3,7 @@ import { clock } from './format'
 import Panel from './Panel'
 
 const SPEEDS = [1, 4, 12]
-const VIEW_LABEL: Record<View, string> = { terminal: 'Terminal', bahia: 'Bahía', escalas: 'Escalas' }
+const VIEW_LABEL: Record<View, string> = { terminal: 'Terminal', bahia: 'Bahía', escalas: 'Tamaños' }
 
 export function Segmented<T extends string | number>({ items, value, onChange, label }: { items: readonly T[]; value: T; onChange: (v: T) => void; label: (v: T) => string }) {
   return (
@@ -21,6 +21,18 @@ export function Segmented<T extends string | number>({ items, value, onChange, l
   )
 }
 
+/** Interruptor de encendido y apagado. */
+function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label: string }) {
+  return (
+    <button role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex items-center gap-1.5 text-[11px] text-slate-500">
+      {label}
+      <span className={`relative h-5 w-9 rounded-full transition-colors ${on ? 'bg-blue-600' : 'bg-slate-300'}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+      </span>
+    </button>
+  )
+}
+
 export default function TimeBar() {
   const t = useStore((s) => s.t)
   const days = useStore((s) => s.params.days)
@@ -29,7 +41,8 @@ export default function TimeBar() {
   const view = useStore((s) => s.view)
   const quality = useStore((s) => s.quality)
   const dayNight = useStore((s) => s.dayNight)
-  const { setT, togglePlay, setSpeed, setView, setQuality, setDayNight } = useStore.getState()
+  const showScale = useStore((s) => s.showScale)
+  const { setT, togglePlay, setSpeed, setView, setQuality, setDayNight, setShowScale } = useStore.getState()
 
   return (
     <Panel className="flex flex-wrap items-center gap-3 px-3 py-2">
@@ -54,6 +67,7 @@ export default function TimeBar() {
       />
       <Segmented items={SPEEDS} value={speed} onChange={setSpeed} label={(s) => `${s} h/s`} />
       <Segmented items={['terminal', 'bahia', 'escalas'] as const} value={view} onChange={setView} label={(v) => VIEW_LABEL[v]} />
+      <Switch on={showScale} onChange={setShowScale} label="Comparar tamaños" />
       <div className="flex items-center gap-1.5" title="La luz sigue la hora simulada, o queda fija de día">
         <span className="text-[11px] text-slate-500">Luz</span>
         <Segmented items={['real', 'dia'] as const} value={dayNight ? 'real' : 'dia'} onChange={(v) => setDayNight(v === 'real')} label={(v) => (v === 'real' ? 'Según la hora' : 'Siempre de día')} />

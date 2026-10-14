@@ -21,8 +21,10 @@ pnpm build    # build estática en dist/
 pnpm zone montevideo   # regenera el mapa de la zona (descarga ~1 min de datos abiertos)
 ```
 
-Se maneja con mouse o con el dedo (pizarrón): arrastrar para girar, rueda o pellizco para el zoom,
-dos dedos para desplazar. Tocar un buque, una grúa o el patio abre su ficha.
+Se maneja con mouse o con el dedo (pizarrón): arrastrar para girar, dos dedos para desplazar, rueda o pellizco
+para acercarse hacia donde se apunta, doble clic o doble toque para ir a un lugar. La cámara puede bajar casi
+hasta el agua. Con teclado: WASD o flechas, Q/E para girar, R/F para subir y bajar, Shift para ir más rápido.
+El botón **Mover** despliega los mismos controles en pantalla. Tocar un buque, una grúa o el patio abre su ficha.
 
 ## En clase
 
@@ -42,6 +44,11 @@ Ver `docs/guia-docente.md`.
   luces de navegación de los buques y ventanas de la ciudad encendidas. Se puede fijar "siempre de día".
 - Sombras del sol, oclusión ambiental (sombras de contacto), brillo de las luces y suavizado.
 - Agua con sombreador propio: reflejo del cielo según el ángulo, oleaje y brillo del sol o la luna.
+- Estela de cada buque calculada sobre el camino que hizo: la V de Kelvin desde la proa, el agua revuelta de la
+  hélice detrás de la popa y espuma animada. Las rutas redondean las esquinas, así los buques giran de a poco.
+- Comparación de tamaños en mar abierto (interruptor "Comparar tamaños" y vista "Tamaños"): buques de 170, 300
+  y 400 m con regla, la cancha del Centenario, una manzana del Centro, contenedores, el Palacio Salvo, la Torre
+  Antel y un Post-Panamax puesto de pie.
 - Operación animada: grúas de muelle, grúas de patio (RTG), tractores que llevan contenedores al patio,
   camiones, estelas, remolcadores al atracar y amarras al muelle.
 - Calidad **alta**, **media** o **baja** (barra inferior). Si el equipo no da abasto, baja sola un nivel;

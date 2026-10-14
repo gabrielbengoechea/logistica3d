@@ -42,6 +42,8 @@ interface State {
   feedTracks: PositionTrack[]
   /** Modo presentación: interfaz más grande para proyectar en el pizarrón. */
   presenting: boolean
+  /** Comparación de tamaños (buques, cancha, edificios) en el mar, visible u oculta. */
+  showScale: boolean
   /** Recorrido guiado en curso: cuál y en qué paso. */
   tour: { key: string; step: number } | null
 
@@ -63,6 +65,7 @@ interface State {
   /** Carga posiciones externas en el formato de eventos común (eventos de tipo 'position'). */
   setFeed: (ships: FeedShip[], events: SimEvent[]) => void
   setPresenting: (on: boolean) => void
+  setShowScale: (on: boolean) => void
   setTour: (tour: { key: string; step: number } | null) => void
   advance: (dtSeconds: number) => void
 }
@@ -89,6 +92,7 @@ export const useStore = create<State>()((set, get) => ({
   dayNight: true,
   feedTracks: [],
   presenting: false,
+  showScale: false,
   tour: null,
 
   setParams: (params) => {
@@ -107,12 +111,14 @@ export const useStore = create<State>()((set, get) => ({
     const keep = selection && 'id' in selection && selection.id === get().follow
     set({ selection, follow: keep ? get().follow : null })
   },
-  setView: (view) => set({ view, follow: null, tour: null }),
+  // La vista "Escalas" va a la comparación de tamaños, así que la muestra.
+  setView: (view) => set({ view, follow: null, tour: null, showScale: view === 'escalas' ? true : get().showScale }),
   setFollow: (follow) => set({ follow }),
   setZoneReady: (zoneReady) => set({ zoneReady }),
   setQuality: (quality, byUser = false) => set({ quality, qualityLocked: byUser || get().qualityLocked }),
   setDayNight: (dayNight) => set({ dayNight }),
   setPresenting: (presenting) => set({ presenting }),
+  setShowScale: (showScale) => set({ showScale }),
   setTour: (tour) => set({ tour, follow: null, selection: null }),
   setFeed: (ships, events) => set({ feedTracks: buildPositionTracks(ships, events) }),
   advance: (dt) => {
