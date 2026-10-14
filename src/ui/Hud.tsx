@@ -26,16 +26,18 @@ export default function Hud() {
   const presenting = useStore((s) => s.presenting)
   const touring = useStore((s) => s.tour !== null)
   const iconTint = useStore((s) => s.iconTint)
+  const uiScale = useStore((s) => s.uiScale)
   useEffect(() => {
     document.documentElement.dataset.icons = iconTint
   }, [iconTint])
-  const zoom = presenting ? { zoom: PRESENT_ZOOM } : undefined
+  const scale = uiScale * (presenting ? PRESENT_ZOOM : 1)
+  const zoom = scale !== 1 ? { zoom: scale } : undefined
 
   return (
     <div className="pointer-events-none absolute inset-0 z-30" style={zoom}>
       <Loading />
       {!touring && (
-        <div className="absolute top-2 right-[60px] left-2 flex max-h-[52%] sm:top-4 sm:right-auto sm:bottom-4 sm:left-4 sm:max-h-none">
+        <div className="absolute top-2 right-[60px] left-2 flex max-h-[52%] items-start sm:top-4 sm:right-auto sm:bottom-4 sm:left-4 sm:max-h-none">
           <Sidebar />
         </div>
       )}

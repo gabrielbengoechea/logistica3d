@@ -19,9 +19,22 @@ export type IconTint = 'sistema' | 'azul' | 'grafito' | 'puerto' | 'trazo'
 function savedTint(): IconTint {
   try {
     const v = localStorage.getItem('l3-iconos') as IconTint | null
-    return v && ['sistema', 'azul', 'grafito', 'puerto', 'trazo'].includes(v) ? v : 'azul'
+    return v && ['sistema', 'azul', 'grafito', 'puerto', 'trazo'].includes(v) ? v : 'puerto'
   } catch {
-    return 'azul'
+    return 'puerto'
+  }
+}
+
+/** Tamaño de la interfaz (escala de los paneles y la letra). */
+export const UI_SCALES = [0.85, 1, 1.15, 1.3] as const
+export type UiScale = (typeof UI_SCALES)[number]
+
+function savedScale(): UiScale {
+  try {
+    const v = Number(localStorage.getItem('l3-escala'))
+    return (UI_SCALES as readonly number[]).includes(v) ? (v as UiScale) : 1
+  } catch {
+    return 1
   }
 }
 
@@ -56,6 +69,7 @@ interface State {
   /** Comparación de tamaños (buques, cancha, edificios) en el mar, visible u oculta. */
   showScale: boolean
   iconTint: IconTint
+  uiScale: UiScale
   /** Recorrido guiado en curso: cuál y en qué paso. */
   tour: { key: string; step: number } | null
 
@@ -79,6 +93,7 @@ interface State {
   setPresenting: (on: boolean) => void
   setShowScale: (on: boolean) => void
   setIconTint: (tint: IconTint) => void
+  setUiScale: (scale: UiScale) => void
   setTour: (tour: { key: string; step: number } | null) => void
   advance: (dtSeconds: number) => void
 }
@@ -107,6 +122,7 @@ export const useStore = create<State>()((set, get) => ({
   presenting: false,
   showScale: false,
   iconTint: savedTint(),
+  uiScale: savedScale(),
   tour: null,
 
   setParams: (params) => {
@@ -140,6 +156,14 @@ export const useStore = create<State>()((set, get) => ({
       // Sin almacenamiento: vale solo para esta sesión.
     }
     set({ iconTint })
+  },
+  setUiScale: (uiScale) => {
+    try {
+      localStorage.setItem('l3-escala', String(uiScale))
+    } catch {
+      // Sin almacenamiento: vale solo para esta sesión.
+    }
+    set({ uiScale })
   },
   setTour: (tour) => set({ tour, follow: null, selection: null }),
   setFeed: (ships, events) => set({ feedTracks: buildPositionTracks(ships, events) }),

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { holdAxis, releaseAxis, type NavAxis } from '../scene/navInput'
-import { useStore, type IconTint, type Quality, type View } from '../store'
+import { UI_SCALES, useStore, type IconTint, type Quality, type UiScale, type View } from '../store'
 import { Segmented, Toggle } from './controls'
 import { Icon, type IconName } from './icons'
 import MovePanel from './NavPad'
@@ -53,6 +53,8 @@ function HoldButton({ axis, value, label, children }: { axis: NavAxis; value: nu
   )
 }
 
+const SCALE_LABEL: Record<UiScale, string> = { 0.85: 'Chica', 1: 'Normal', 1.15: 'Grande', 1.3: 'Muy grande' }
+
 const TINTS: { key: IconTint; label: string; swatch: string; ring?: boolean }[] = [
   { key: 'sistema', label: 'Sistema', swatch: 'conic-gradient(#007aff 0 25%, #ff9500 0 50%, #34c759 0 75%, #af52de 0)' },
   { key: 'azul', label: 'Azul', swatch: '#0a6cff' },
@@ -66,7 +68,8 @@ function Settings({ onClose }: { onClose: () => void }) {
   const quality = useStore((s) => s.quality)
   const showScale = useStore((s) => s.showScale)
   const iconTint = useStore((s) => s.iconTint)
-  const { setQuality, setShowScale, setIconTint } = useStore.getState()
+  const uiScale = useStore((s) => s.uiScale)
+  const { setQuality, setShowScale, setIconTint, setUiScale } = useStore.getState()
   return (
     <div className="material pointer-events-auto w-[300px] space-y-4 rounded-[18px] p-4">
       <div className="flex items-center justify-between">
@@ -74,6 +77,10 @@ function Settings({ onClose }: { onClose: () => void }) {
         <button onClick={onClose} aria-label="Cerrar ajustes" className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-[var(--fill)] text-[var(--ink-2)]">
           <Icon name="cerrar" size={12} stroke={3} />
         </button>
+      </div>
+      <div className="space-y-1.5">
+        <span className="px-1 text-[13px] font-semibold text-[var(--ink-2)]">Tamaño de la interfaz</span>
+        <Segmented items={UI_SCALES} value={uiScale} onChange={(v: UiScale) => setUiScale(v)} label={(v) => SCALE_LABEL[v]} size="sm" />
       </div>
       <div className="space-y-1.5">
         <span className="px-1 text-[13px] font-semibold text-[var(--ink-2)]">Calidad gráfica</span>
