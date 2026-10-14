@@ -35,6 +35,8 @@ interface Zone {
   bbox: BBox
   /** Recorte más chico para edificios (la ciudad entera tiene decenas de miles). */
   buildingsBbox: BBox
+  /** Recorte donde el suelo se dibuja con las calles, plazas y parques (más nítido que la imagen satelital). */
+  groundBbox: BBox
   /** Origen de las coordenadas locales [lon, lat]. */
   origin: [number, number]
   sentinelScene: string
@@ -50,6 +52,7 @@ const ZONES: Record<string, Zone> = {
     name: 'montevideo',
     bbox: [-56.32, -34.975, -56.13, -34.855],
     buildingsBbox: [-56.235, -34.912, -56.19, -34.89],
+    groundBbox: [-56.24, -34.915, -56.183, -34.886],
     origin: [-56.2125, -34.9015],
     sentinelScene: 'S2B_21HWB_20260208_1_L2A',
     demTile: 'Copernicus_DSM_COG_10_S35_00_W057_00_DEM',
@@ -318,6 +321,11 @@ function buildingHeight(b: Row): number {
 
 const primaryName = (r: Row) => ((r.names as { primary?: string } | null)?.primary ?? null) as string | null
 
+/** Categorías de calle que se dibujan en el suelo (el ancho de cada una lo decide la escena). */
+const STREETS = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential', 'living_street', 'unclassified', 'pedestrian'])
+const GREEN = new Set(['park', 'garden', 'grass', 'pitch', 'playground', 'recreation_ground', 'village_green', 'cemetery', 'meadow', 'golf_course', 'dog_park'])
+const PAVED = new Set(['pedestrian', 'plaza', 'square'])
+
 async function buildVectors(zone: Zone, local: Local, out: string) {
   const data = {
     buildings: [] as { h: number; ring: [number, number][] }[],
@@ -325,6 +333,8 @@ async function buildVectors(zone: Zone, local: Local, out: string) {
     areas: [] as { class: string; name: string | null; ring: [number, number][] }[],
     roads: [] as { class: string; pts: [number, number][] }[],
     rails: [] as [number, number][][],
+    parks: [] as { kind: 'verde' | 'plaza'; ring: [number, number][] }[],
+    ground: null as { xmin: number; xmax: number; zmin: number; zmax: number } | null,
   }
 
   for (const b of await overtureRows('buildings', 'building', zone.buildingsBbox, ['height', 'num_floors', 'class']))
@@ -350,15 +360,37 @@ async function buildVectors(zone: Zone, local: Local, out: string) {
     }
   }
 
-  const keepRoads = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary'])
+  // Suelo de la ciudad: calles de todas las categorías, plazas y espacios verdes, solo en el recorte del suelo.
+  const g = zone.groundBbox
+  const corners = [local.xz(g[0], g[3]), local.xz(g[2], g[1])]
+  const r1 = (v: number) => Math.round(v)
+  data.ground = { xmin: r1(corners[0][0]), zmin: r1(corners[0][1]), xmax: r1(corners[1][0]), zmax: r1(corners[1][1]) }
+  const histogram: Record<string, number> = {}
+  for (const r of await overtureRows('base', 'land_use', g, ['subtype', 'class'])) {
+    const key = `${r.subtype}/${r.class}`
+    histogram[key] = (histogram[key] ?? 0) + 1
+    const kind = GREEN.has(r.class as string) ? 'verde' : PAVED.has(r.class as string) ? 'plaza' : null
+    if (!kind) continue
+    for (const poly of polygons(r.geometry)) {
+      const ring = ringLocal(poly[0], local, 0.8)
+      if (ring) data.parks.push({ kind, ring })
+    }
+  }
+  console.log('usos del suelo:', histogram)
+
+  const roadHistogram: Record<string, number> = {}
   for (const r of await overtureRows('transportation', 'segment', zone.bbox, ['subtype', 'class']))
     for (const ln of lines(r.geometry)) {
       if (r.subtype === 'rail') data.rails.push(lineLocal(ln, local))
-      else if (r.subtype === 'road' && keepRoads.has(r.class as string)) data.roads.push({ class: r.class as string, pts: lineLocal(ln, local) })
+      else if (r.subtype === 'road' && STREETS.has(r.class as string) && r.bbox.xmax >= g[0] && r.bbox.xmin <= g[2] && r.bbox.ymax >= g[1] && r.bbox.ymin <= g[3]) {
+        roadHistogram[r.class as string] = (roadHistogram[r.class as string] ?? 0) + 1
+        data.roads.push({ class: r.class as string, pts: lineLocal(ln, local, 0.6) })
+      }
     }
+  console.log('calles:', roadHistogram)
 
   writeFileSync(join(out, 'vectors.json'), JSON.stringify(data))
-  console.log(Object.fromEntries(Object.entries(data).map(([k, v]) => [k, v.length])))
+  console.log(Object.fromEntries(Object.entries(data).map(([k, v]) => [k, Array.isArray(v) ? v.length : v])))
   return { file: 'vectors.json', source: 'Overture Maps (incluye datos de OpenStreetMap, ODbL)' }
 }
 

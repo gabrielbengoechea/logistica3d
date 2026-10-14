@@ -2,7 +2,7 @@
 
 Logística 3D muestra el puerto de Montevideo sobre el mapa real, con una terminal de contenedores **simulada**. Las cosas que hay que tener claras:
 
-- La ubicación, el relieve, la imagen satelital, los edificios y el frente del muelle son reales.
+- La ubicación, el relieve, la imagen satelital, los edificios, las calles y el frente del muelle son reales.
 - Los buques, las grúas, el patio y los números de operación salen de un simulador.
 
 El valor didáctico está en **cambiar una cosa y ver qué pasa en toda la cadena**.

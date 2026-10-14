@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Html } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { ENTRY, LAND_Y, MOUTH, PAD, anchorageSlot, toTerminal } from './layout'
 import { SHARED } from './environment'
+import { GROUND_COLORS, groundTexture } from './ground'
 import Tag from './Tag'
 import { Breakwaters, PortLabels, PortLand, inRing, portRing } from './Port'
 import { heightAt, type Zone } from './zone'
@@ -13,9 +15,15 @@ const insidePad = (x: number, z: number, margin: number) => {
   return tx > PAD[0] - margin && tx < PAD[1] + margin && tz > PAD[2] - margin && tz < PAD[3] + margin
 }
 
-/** Relieve real con la imagen satelital. Bajo la terminal se aplana: ahí va el modelo de la terminal. */
+/**
+ * Relieve real con la imagen satelital. En la ciudad, encima de la imagen va el suelo dibujado con el mapa (calles,
+ * plazas y parques), que se ve nítido de cerca. Bajo la terminal se aplana: ahí va el modelo de la terminal.
+ */
 function Terrain({ zone }: { zone: Zone }) {
   const [texture, setTexture] = useState<THREE.Texture | null>(null)
+  const maxTextureSize = useThree((s) => s.gl.capabilities.maxTextureSize)
+  const ground = useMemo(() => groundTexture(zone.vectors, Math.min(4096, maxTextureSize)), [zone, maxTextureSize])
+  useEffect(() => () => ground?.dispose(), [ground])
   useEffect(() => {
     new THREE.TextureLoader().load(zone.imageUrl, (t) => {
       t.colorSpace = THREE.SRGBColorSpace
@@ -50,19 +58,43 @@ function Terrain({ zone }: { zone: Zone }) {
   const material = useMemo(() => {
     if (!texture) return null
     const m = new THREE.MeshStandardMaterial({ map: texture, roughness: 1 })
-    // De noche, las zonas urbanas de la imagen (claras) se encienden con puntos de luz cálida.
+    const rect = zone.vectors.ground
     m.onBeforeCompile = (shader) => {
       shader.uniforms.uNight = SHARED.uNight
+      shader.uniforms.uGround = { value: ground }
+      shader.uniforms.uGroundRect = { value: rect ? new THREE.Vector4(rect.xmin, rect.zmin, rect.xmax - rect.xmin, rect.zmax - rect.zmin) : new THREE.Vector4(0, 0, 1, 1) }
+      shader.uniforms.uHasGround = { value: ground ? 1 : 0 }
+      shader.uniforms.uBlock = { value: new THREE.Color(GROUND_COLORS.block) }
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;')
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nuniform float uNight;')
+        .replace(
+          '#include <common>',
+          '#include <common>\nvarying vec3 vWPos;\nuniform float uNight;\nuniform sampler2D uGround;\nuniform vec4 uGroundRect;\nuniform float uHasGround;\nuniform vec3 uBlock;\nfloat street;\nfloat cityGround;\nfloat satLum;',
+        )
+        .replace(
+          '#include <map_fragment>',
+          `#include <map_fragment>
+          // La imagen satelital se aclara y se desatura en tierra firme, para que combine con la interfaz y con el suelo dibujado.
+          float onLand = smoothstep(0.4, 1.4, vWPos.y);
+          satLum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+          vec3 washed = mix(mix(vec3(satLum), diffuseColor.rgb, 0.6), uBlock, 0.45);
+          diffuseColor.rgb = mix(diffuseColor.rgb, washed, onLand);
+          // Suelo de la ciudad: se funde con la imagen en los últimos 300 m del rectángulo y solo sobre tierra firme.
+          vec2 gm = vWPos.xz - uGroundRect.xy;
+          vec2 gUv = gm / uGroundRect.zw;
+          vec2 toEdge = min(gm, uGroundRect.zw - gm);
+          cityGround = uHasGround * smoothstep(0.0, 500.0, min(toEdge.x, toEdge.y)) * onLand;
+          vec4 g = texture2D(uGround, vec2(gUv.x, 1.0 - gUv.y));
+          street = cityGround * smoothstep(0.93, 0.98, min(g.r, min(g.g, g.b)));
+          diffuseColor.rgb = mix(diffuseColor.rgb, g.rgb, cityGround);`,
+        )
         .replace(
           '#include <emissivemap_fragment>',
           `#include <emissivemap_fragment>
-          float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-          float urban = smoothstep(0.16, 0.42, lum) * step(1.0, vWPos.y);
+          // Fuera del suelo dibujado, las zonas claras de la imagen original; dentro, las calles.
+          float urban = mix(smoothstep(0.16, 0.42, satLum) * step(1.0, vWPos.y), street, cityGround);
           // Faroles: puntos redondos sueltos en una grilla de 12 m, solo en algunas celdas.
           vec2 cellId = floor(vWPos.xz / 12.0);
           vec2 inCell = fract(vWPos.xz / 12.0) - 0.5;
@@ -71,9 +103,9 @@ function Terrain({ zone }: { zone: Zone }) {
           totalEmissiveRadiance += vec3(1.0, 0.72, 0.42) * urban * (0.05 + lamp * 1.4) * uNight;`,
         )
     }
-    m.customProgramCacheKey = () => 'terreno-noche'
+    m.customProgramCacheKey = () => 'terreno-ciudad'
     return m
-  }, [texture])
+  }, [texture, ground, zone])
 
   if (!material) return null
   return <mesh geometry={geometry} material={material} receiveShadow />

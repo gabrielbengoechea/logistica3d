@@ -15,6 +15,12 @@ export interface ZoneVectors {
   piers?: { class: string; name: string | null; ring?: [number, number][]; line?: [number, number][] }[]
   /** Áreas industriales y portuarias, entre ellas el recinto del puerto. */
   areas?: { class: string; name: string | null; ring: [number, number][] }[]
+  /** Calles de la ciudad (solo dentro de `ground`), por categoría. */
+  roads?: { class: string; pts: [number, number][] }[]
+  /** Espacios verdes y plazas de la ciudad. */
+  parks?: { kind: 'verde' | 'plaza'; ring: [number, number][] }[]
+  /** Rectángulo donde el suelo se dibuja con las calles, en metros locales. */
+  ground?: { xmin: number; xmax: number; zmin: number; zmax: number } | null
 }
 
 export interface Zone {

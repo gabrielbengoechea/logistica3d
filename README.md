@@ -6,7 +6,8 @@ camiones) y ve en 3D cómo cambian las colas, la espera y el patio.
 
 Todo es web: React, Three.js (React Three Fiber) y TypeScript. No hay servidor: la app es una página estática.
 
-- **Mapa real:** relieve (Copernicus DEM), imagen satelital (Sentinel-2) y edificios (Overture / OpenStreetMap).
+- **Mapa real:** relieve (Copernicus DEM), imagen satelital (Sentinel-2) y edificios (Overture / OpenStreetMap). En el
+  centro de la ciudad, el suelo se dibuja con las calles, plazas y parques del mapa, nítido de cerca.
   La terminal está en su ubicación real y con su frente de muelle real.
 - **Operación simulada:** buques, llegadas, grúas, patio y camiones salen del simulador. Por ahora no se usan
   datos reales de operación; la puerta queda abierta (ver `docs/datos-reales.md`).
@@ -111,7 +112,7 @@ El 3D es una capa sobre los datos: el simulador escribe eventos (`arrive`, `bert
 
 - Relieve: Copernicus DEM GLO-30, © DLR e.V. 2010-2014 y © Airbus Defence and Space GmbH 2014-2018, provisto bajo COPERNICUS por la Unión Europea y la ESA.
 - Imagen: Copernicus Sentinel-2 (escena del 8 de febrero de 2026), datos abiertos de Copernicus.
-- Edificios y geometría: Overture Maps Foundation, con datos © colaboradores de OpenStreetMap (ODbL).
+- Edificios, calles, plazas y parques: Overture Maps Foundation, con datos © colaboradores de OpenStreetMap (ODbL).
 - Puerto: contorno del recinto, escolleras y dique de cintura de OpenStreetMap (vía Overture). Nombres y usos de
   muelles, dársenas y terminales según el plano "Muelles y Terminales" de la ANP; datos de TCP (muelle, grúas,
   straddle carriers, ampliación) según el folleto del puerto de Montevideo 2025 de la ANP
