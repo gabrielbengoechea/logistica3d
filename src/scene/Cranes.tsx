@@ -6,7 +6,8 @@ import { cranesOnShift } from '../sim/terminalSim'
 import { phaseAt } from '../sim/tracks'
 import { useStore } from '../store'
 import { LAND_Y, craneX } from './layout'
-import { box, getContainerTexture, strut } from './materials'
+import { box, getContainerTexture, getHaloTexture, strut } from './materials'
+import { useGlowMaterial, useHaloMaterial } from './useGlow'
 
 /**
  * Grúa pórtico de muelle (STS), en su marco: x a lo largo del muelle, z hacia tierra, z < 0 sobre el agua.
@@ -66,6 +67,8 @@ function Crane({ berth, index, x }: { berth: number; index: number; x: number })
   const select = useStore((s) => s.select)
   const selected = useStore((s) => s.selection?.kind === 'crane' && s.selection.berth === berth && s.selection.index === index)
   const { frame, details } = geometries()
+  const flood = useGlowMaterial('#fff1cf', 0.1, 10)
+  const halo = useHaloMaterial(getHaloTexture(), 0.65)
 
   useFrame((_, delta) => {
     const { tracks, t, params, playing } = useStore.getState()
@@ -98,6 +101,18 @@ function Crane({ berth, index, x }: { berth: number; index: number; x: number })
       <mesh position={[0, 73.5, 28]}>
         <sphereGeometry args={[0.9, 8, 8]} />
         <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={1.5} />
+      </mesh>
+      {/* Reflectores bajo la pluma (sobre el buque) y bajo la viga portal (sobre el muelle) */}
+      {[-30, -8, 20].map((z) => (
+        <mesh key={z} position={[0, 45.6, z]} material={flood}>
+          <boxGeometry args={[4, 0.5, 1.4]} />
+        </mesh>
+      ))}
+      <mesh rotation-x={-Math.PI / 2} position={[0, -2.3, -24]} material={halo}>
+        <planeGeometry args={[70, 70]} />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.26, 18]} material={halo}>
+        <planeGeometry args={[60, 50]} />
       </mesh>
       <group ref={trolley} position={[0, 45, 8]}>
         <mesh castShadow>

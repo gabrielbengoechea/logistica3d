@@ -24,6 +24,17 @@ pnpm zone montevideo   # regenera el mapa de la zona (descarga ~1 min de datos a
 Se maneja con mouse o con el dedo (pizarrón): arrastrar para girar, rueda o pellizco para el zoom,
 dos dedos para desplazar. Tocar un buque, una grúa o el patio abre su ficha.
 
+## Gráficos
+
+- La luz sigue la hora simulada: amanecer, día, atardecer y noche, con faroles, reflectores de las grúas,
+  luces de navegación de los buques y ventanas de la ciudad encendidas. Se puede fijar "siempre de día".
+- Sombras del sol, oclusión ambiental (sombras de contacto), brillo de las luces y suavizado.
+- Agua con sombreador propio: reflejo del cielo según el ángulo, oleaje y brillo del sol o la luna.
+- Operación animada: grúas de muelle, grúas de patio (RTG), tractores que llevan contenedores al patio,
+  camiones, estelas, remolcadores al atracar y amarras al muelle.
+- Calidad **alta**, **media** o **baja** (barra inferior). Si el equipo no da abasto, baja sola un nivel;
+  elegirla a mano la deja fija.
+
 ## El simulador
 
 Pasos de 5 minutos, rápido de recalcular cada vez que se mueve un control. Parámetros:
@@ -55,7 +66,7 @@ src/
   sim/events.ts        formato de eventos común (simulador hoy, datos reales después)
   sim/tracks.ts        recorrido de cada buque a partir de los eventos
   feeds/positions.ts   recorridos a partir de posiciones externas (la puerta para datos reales)
-  scene/               escena 3D: mapa, terminal, buques, grúas, patio, camiones, agua, cielo, escalas
+  scene/               escena 3D: mapa, terminal, buques, grúas, patio, tractores, agua, cielo, luz del día, efectos
   ui/                  indicadores, panel del simulador, gráfico de la semana, fichas y línea de tiempo
 public/zones/          datos de cada zona (relieve, imagen, geometría)
 tools/zone/            script que genera los datos de una zona (TypeScript, corre con Node)

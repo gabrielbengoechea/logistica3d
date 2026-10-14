@@ -6,6 +6,7 @@ import FeedShips from './FeedShips'
 import Lighting from './Lighting'
 import Water from './Water'
 import Cranes from './Cranes'
+import Effects from './Effects'
 import { poseAt } from '../feeds/positions'
 import { TERMINAL, toWorld } from './layout'
 import ScaleComparison, { SCALE_AT } from './ScaleComparison'
@@ -14,6 +15,8 @@ import TerminalPad from './TerminalPad'
 import Trucks from './Trucks'
 import World from './World'
 import Yard from './Yard'
+import Rtgs from './Rtgs'
+import Tractors from './Tractors'
 import { shipPose } from './pose'
 import { useZone } from './zone'
 
@@ -60,10 +63,29 @@ export default function Scene() {
   const setZoneReady = useStore((s) => s.setZoneReady)
   useEffect(() => setZoneReady(zone !== null), [zone, setZoneReady])
 
+  // Entrada: la cámara arranca sobre la bahía y, cuando el mapa está listo, vuela despacio hasta la vista elegida.
+  const intro = useRef(true)
   useEffect(() => {
+    const c = controls.current
+    if (!c) return
     const [px, py, pz, tx, ty, tz] = VIEWS[view]
-    controls.current?.setLookAt(px, py, pz, tx, ty, tz, true)
-  }, [view])
+    if (intro.current) {
+      if (!zone) {
+        const [bx, by, bz, btx, bty, btz] = VIEWS.bahia
+        c.setLookAt(bx, by, bz, btx, bty, btz, false)
+        return
+      }
+      intro.current = false
+      c.smoothTime = 1.8
+      const timer = setTimeout(() => (c.smoothTime = 0.25), 4000)
+      c.setLookAt(px, py, pz, tx, ty, tz, true)
+      return () => {
+        clearTimeout(timer)
+        c.smoothTime = 0.25
+      }
+    }
+    c.setLookAt(px, py, pz, tx, ty, tz, true)
+  }, [view, zone])
 
   return (
     <>
@@ -76,12 +98,15 @@ export default function Scene() {
       <group position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
         <TerminalPad />
         <Yard />
+        <Rtgs />
         <Cranes />
         <Trucks />
+        <Tractors />
       </group>
       <Ships />
       <FeedShips />
       <ScaleComparison />
+      <Effects />
     </>
   )
 }

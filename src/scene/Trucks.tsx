@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { useStore } from '../store'
 import { CONTAINER_COLORS, LAND_Y } from './layout'
 import { getContainerTexture } from './materials'
+import { useGlowMaterial } from './useGlow'
 
 // Circuito de los camiones: calle del muelle, lateral, calle trasera y vuelta.
 const PATH: [number, number][] = [
@@ -40,6 +41,8 @@ export default function Trucks() {
   const count = Math.max(2, Math.min(10, Math.round(rate / 15)))
   const refs = useRef<(THREE.Group | null)[]>([])
   const dist = useRef(0)
+  const head = useGlowMaterial('#fff6dc', 0.1, 7)
+  const tail = useGlowMaterial('#ff3b30', 0.1, 4)
   const colors = useMemo(() => Array.from({ length: 10 }, (_, i) => CONTAINER_COLORS[(i * 3) % CONTAINER_COLORS.length]), [])
 
   useFrame((_, delta) => {
@@ -74,6 +77,15 @@ export default function Trucks() {
               <meshStandardMaterial color="#111827" roughness={0.9} />
             </mesh>
           ))}
+          <mesh position={[10.15, 1.8, 0.85]} material={head}>
+            <boxGeometry args={[0.15, 0.4, 0.5]} />
+          </mesh>
+          <mesh position={[10.15, 1.8, -0.85]} material={head}>
+            <boxGeometry args={[0.15, 0.4, 0.5]} />
+          </mesh>
+          <mesh position={[-7.55, 1.6, 0]} material={tail}>
+            <boxGeometry args={[0.15, 0.3, 2.2]} />
+          </mesh>
           <mesh position={[-0.6, 3.2, 0]} castShadow>
             <boxGeometry args={[12.2, 2.6, 2.44]} />
             <meshStandardMaterial color={colors[i]} map={getContainerTexture()} roughness={0.7} />

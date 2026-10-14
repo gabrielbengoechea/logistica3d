@@ -1,4 +1,4 @@
-import { useStore, type View } from '../store'
+import { useStore, type Quality, type View } from '../store'
 import { clock } from './format'
 import Panel from './Panel'
 
@@ -27,7 +27,9 @@ export default function TimeBar() {
   const playing = useStore((s) => s.playing)
   const speed = useStore((s) => s.speed)
   const view = useStore((s) => s.view)
-  const { setT, togglePlay, setSpeed, setView } = useStore.getState()
+  const quality = useStore((s) => s.quality)
+  const dayNight = useStore((s) => s.dayNight)
+  const { setT, togglePlay, setSpeed, setView, setQuality, setDayNight } = useStore.getState()
 
   return (
     <Panel className="flex flex-wrap items-center gap-3 px-3 py-2">
@@ -52,6 +54,14 @@ export default function TimeBar() {
       />
       <Segmented items={SPEEDS} value={speed} onChange={setSpeed} label={(s) => `${s} h/s`} />
       <Segmented items={['terminal', 'bahia', 'escalas'] as const} value={view} onChange={setView} label={(v) => VIEW_LABEL[v]} />
+      <div className="flex items-center gap-1.5" title="La luz sigue la hora simulada, o queda fija de día">
+        <span className="text-[11px] text-slate-500">Luz</span>
+        <Segmented items={['real', 'dia'] as const} value={dayNight ? 'real' : 'dia'} onChange={(v) => setDayNight(v === 'real')} label={(v) => (v === 'real' ? 'Según la hora' : 'Siempre de día')} />
+      </div>
+      <div className="flex items-center gap-1.5" title="Baja la calidad si la animación va a tirones">
+        <span className="text-[11px] text-slate-500">Calidad</span>
+        <Segmented items={['alta', 'media', 'baja'] as Quality[]} value={quality} onChange={(q) => setQuality(q, true)} label={(q) => q[0].toUpperCase() + q.slice(1)} />
+      </div>
     </Panel>
   )
 }

@@ -11,6 +11,8 @@ export type Selection =
   | { kind: 'yard' }
   | null
 export type View = 'terminal' | 'bahia' | 'escalas'
+/** Calidad gráfica: alta (sombras, oclusión ambiental y brillo), media (sin oclusión) o baja (sin efectos). */
+export type Quality = 'alta' | 'media' | 'baja'
 
 interface State {
   params: SimParams
@@ -28,6 +30,11 @@ interface State {
   /** Buque que sigue la cámara (id), o null. */
   follow: string | null
   zoneReady: boolean
+  quality: Quality
+  /** Si el usuario eligió la calidad a mano, no se baja sola. */
+  qualityLocked: boolean
+  /** La luz sigue la hora simulada (día, atardecer, noche) o queda fija de día. */
+  dayNight: boolean
   /**
    * Recorridos de una fuente externa de posiciones (AIS, GPS...). Hoy vacío: la app usa solo el
    * simulador. Es la puerta para conectar datos reales más adelante (ver docs/datos-reales.md).
@@ -45,6 +52,8 @@ interface State {
   setView: (v: View) => void
   setFollow: (id: string | null) => void
   setZoneReady: (ready: boolean) => void
+  setQuality: (q: Quality, byUser?: boolean) => void
+  setDayNight: (on: boolean) => void
   /** Carga posiciones externas en el formato de eventos común (eventos de tipo 'position'). */
   setFeed: (ships: FeedShip[], events: SimEvent[]) => void
   advance: (dtSeconds: number) => void
@@ -67,6 +76,9 @@ export const useStore = create<State>()((set, get) => ({
   view: 'terminal',
   follow: null,
   zoneReady: false,
+  quality: typeof window !== 'undefined' && window.innerWidth < 900 ? 'media' : 'alta',
+  qualityLocked: false,
+  dayNight: true,
   feedTracks: [],
 
   setParams: (params) => {
@@ -86,6 +98,8 @@ export const useStore = create<State>()((set, get) => ({
   setView: (view) => set({ view, follow: null }),
   setFollow: (follow) => set({ follow }),
   setZoneReady: (zoneReady) => set({ zoneReady }),
+  setQuality: (quality, byUser = false) => set({ quality, qualityLocked: byUser || get().qualityLocked }),
+  setDayNight: (dayNight) => set({ dayNight }),
   setFeed: (ships, events) => set({ feedTracks: buildPositionTracks(ships, events) }),
   advance: (dt) => {
     const s = get()
