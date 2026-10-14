@@ -16,13 +16,25 @@ Todo es web: React, Three.js (React Three Fiber) y TypeScript. No hay servidor: 
 ```bash
 pnpm install
 pnpm dev      # http://localhost:5173
-pnpm test     # pruebas del simulador y del motor
+pnpm test     # pruebas del simulador, del motor y de las actividades
 pnpm build    # build estática en dist/
 pnpm zone montevideo   # regenera el mapa de la zona (descarga ~1 min de datos abiertos)
 ```
 
 Se maneja con mouse o con el dedo (pizarrón): arrastrar para girar, rueda o pellizco para el zoom,
 dos dedos para desplazar. Tocar un buque, una grúa o el patio abre su ficha.
+
+## En clase
+
+Ver `docs/guia-docente.md`.
+
+- **Actividades** (pestaña del panel derecho): Temporada alta, Paro de camiones, Un solo turno y Llegadas con
+  itinerario. Cada una cambia un solo parámetro. El alumno predice antes de simular; después ve la respuesta
+  correcta (calculada con la simulación, no escrita de antemano), la explicación con los números de esa corrida
+  y preguntas para discutir.
+- **Recorridos guiados**: "Del río al muelle" y "La terminal por dentro". La cámara vuela entre encuadres con un
+  texto corto en cada uno (flechas para avanzar, Esc para salir).
+- **Presentar**: agranda la interfaz y pasa a pantalla completa para el pizarrón.
 
 ## Gráficos
 
@@ -63,14 +75,15 @@ base, en una tabla y en un gráfico hora por hora (buques esperando y ocupación
 src/
   sim/terminalSim.ts   simulador: llegadas, fondeadero, muelles, grúas, turnos, patio y camiones
   sim/presets.ts       escenarios listos para clase
+  didactic/            actividades de clase (predecir, simular, comparar) y recorridos guiados
   sim/events.ts        formato de eventos común (simulador hoy, datos reales después)
   sim/tracks.ts        recorrido de cada buque a partir de los eventos
   feeds/positions.ts   recorridos a partir de posiciones externas (la puerta para datos reales)
   scene/               escena 3D: mapa, terminal, buques, grúas, patio, tractores, agua, cielo, luz del día, efectos
-  ui/                  indicadores, panel del simulador, gráfico de la semana, fichas y línea de tiempo
+  ui/                  indicadores, panel del simulador y actividades, recorridos, gráfico, fichas y línea de tiempo
 public/zones/          datos de cada zona (relieve, imagen, geometría)
 tools/zone/            script que genera los datos de una zona (TypeScript, corre con Node)
-docs/                  datos reales para el futuro y borradores de pedidos de datos
+docs/                  guía docente, datos reales para el futuro y borradores de pedidos de datos
 ```
 
 El 3D es una capa sobre los datos: el simulador escribe eventos (`arrive`, `berth`, `work-start`,

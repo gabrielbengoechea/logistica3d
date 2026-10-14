@@ -40,10 +40,16 @@ interface State {
    * simulador. Es la puerta para conectar datos reales más adelante (ver docs/datos-reales.md).
    */
   feedTracks: PositionTrack[]
+  /** Modo presentación: interfaz más grande para proyectar en el pizarrón. */
+  presenting: boolean
+  /** Recorrido guiado en curso: cuál y en qué paso. */
+  tour: { key: string; step: number } | null
 
   setParams: (params: SimParams) => void
   setParam: <K extends keyof SimParams>(key: K, value: SimParams[K]) => void
   saveBase: () => void
+  /** Arranca un escenario comparado contra otra base (lo usan las actividades), desde el principio. */
+  startScenario: (base: SimParams, params: SimParams) => void
   resetToBase: () => void
   setT: (t: number) => void
   togglePlay: () => void
@@ -56,6 +62,8 @@ interface State {
   setDayNight: (on: boolean) => void
   /** Carga posiciones externas en el formato de eventos común (eventos de tipo 'position'). */
   setFeed: (ships: FeedShip[], events: SimEvent[]) => void
+  setPresenting: (on: boolean) => void
+  setTour: (tour: { key: string; step: number } | null) => void
   advance: (dtSeconds: number) => void
 }
 
@@ -80,6 +88,8 @@ export const useStore = create<State>()((set, get) => ({
   qualityLocked: false,
   dayNight: true,
   feedTracks: [],
+  presenting: false,
+  tour: null,
 
   setParams: (params) => {
     const next = run(params)
@@ -87,6 +97,8 @@ export const useStore = create<State>()((set, get) => ({
   },
   setParam: (key, value) => get().setParams({ ...get().params, [key]: value }),
   saveBase: () => set({ base: get().result }),
+  startScenario: (base, params) =>
+    set({ ...run(params), base: simulate(base), t: 0, playing: true, selection: null, follow: null }),
   resetToBase: () => get().setParams(get().base.params),
   setT: (t) => set({ t }),
   togglePlay: () => set({ playing: !get().playing }),
@@ -95,11 +107,13 @@ export const useStore = create<State>()((set, get) => ({
     const keep = selection && 'id' in selection && selection.id === get().follow
     set({ selection, follow: keep ? get().follow : null })
   },
-  setView: (view) => set({ view, follow: null }),
+  setView: (view) => set({ view, follow: null, tour: null }),
   setFollow: (follow) => set({ follow }),
   setZoneReady: (zoneReady) => set({ zoneReady }),
   setQuality: (quality, byUser = false) => set({ quality, qualityLocked: byUser || get().qualityLocked }),
   setDayNight: (dayNight) => set({ dayNight }),
+  setPresenting: (presenting) => set({ presenting }),
+  setTour: (tour) => set({ tour, follow: null, selection: null }),
   setFeed: (ships, events) => set({ feedTracks: buildPositionTracks(ships, events) }),
   advance: (dt) => {
     const s = get()

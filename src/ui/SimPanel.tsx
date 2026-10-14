@@ -3,6 +3,7 @@ import { PRESETS, presetParams } from '../sim/presets'
 import { SHIP_CLASSES, type Kpis, type ShipClassKey, type SimParams } from '../sim/terminalSim'
 import { useStore } from '../store'
 import { hours, num, pct } from './format'
+import ActivityPanel from './ActivityPanel'
 import Panel from './Panel'
 import { Segmented } from './TimeBar'
 import WeekChart from './WeekChart'
@@ -82,8 +83,37 @@ function sameParams(a: SimParams, b: SimParams) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+type Tab = 'sim' | 'act'
+
 export default function SimPanel() {
   const [open, setOpen] = useState(() => window.innerWidth >= 900)
+  const [tab, setTab] = useState<Tab>('sim')
+
+  if (!open)
+    return (
+      <Panel className="px-3 py-2">
+        <button className="text-sm font-semibold text-blue-700" onClick={() => setOpen(true)}>
+          Simulador y actividades ▸
+        </button>
+      </Panel>
+    )
+
+  return (
+    <Panel className="max-h-[48vh] w-full overflow-y-auto p-4 sm:max-h-[calc(100vh-190px)] sm:w-[340px]">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex-1">
+          <Segmented items={['sim', 'act'] as const} value={tab} onChange={setTab} label={(v) => (v === 'sim' ? 'Simulador' : 'Actividades')} />
+        </div>
+        <button className="text-xs text-slate-400 hover:text-slate-600" onClick={() => setOpen(false)}>
+          ocultar
+        </button>
+      </div>
+      {tab === 'sim' ? <Simulator /> : <ActivityPanel onOpenSimulator={() => setTab('sim')} />}
+    </Panel>
+  )
+}
+
+function Simulator() {
   const params = useStore((s) => s.params)
   const result = useStore((s) => s.result)
   const base = useStore((s) => s.base)
@@ -92,28 +122,12 @@ export default function SimPanel() {
   const saveBase = useStore((s) => s.saveBase)
   const resetToBase = useStore((s) => s.resetToBase)
 
-  if (!open)
-    return (
-      <Panel className="px-3 py-2">
-        <button className="text-sm font-semibold text-blue-700" onClick={() => setOpen(true)}>
-          Simulador ▸
-        </button>
-      </Panel>
-    )
-
   const active = PRESETS.find((p) => sameParams(presetParams(p), { ...params, seed: presetParams(p).seed, days: presetParams(p).days }))
   const mixTotal = Object.values(params.mix).reduce((a, b) => a + b, 0) || 1
   const setMix = (k: ShipClassKey, v: number) => setParam('mix', { ...params.mix, [k]: v })
 
   return (
-    <Panel className="max-h-[48vh] w-full overflow-y-auto p-4 sm:max-h-[calc(100vh-190px)] sm:w-[340px]">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-800">Simulador</h2>
-        <button className="text-xs text-slate-400 hover:text-slate-600" onClick={() => setOpen(false)}>
-          ocultar
-        </button>
-      </div>
-
+    <>
       <div className="mb-1 text-[10.5px] font-medium uppercase tracking-wide text-slate-400">Escenarios</div>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {PRESETS.map((p) => (
@@ -356,6 +370,6 @@ export default function SimPanel() {
           </button>
         </div>
       </div>
-    </Panel>
+    </>
   )
 }

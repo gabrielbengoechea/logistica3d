@@ -3,6 +3,7 @@ import Kpis from './Kpis'
 import Panel from './Panel'
 import SimPanel from './SimPanel'
 import TimeBar from './TimeBar'
+import { TourButtons, TourCaption } from './Tours'
 import { useStore } from '../store'
 
 function Loading() {
@@ -15,10 +16,16 @@ function Loading() {
   )
 }
 
+/** En modo presentación la interfaz se agranda para leerse desde el fondo del aula. */
+const PRESENT_ZOOM = 1.3
+
 /** Capa de interfaz sobre la escena 3D. Solo los paneles reciben clics; el resto pasa a la escena. */
 export default function Hud() {
+  const presenting = useStore((s) => s.presenting)
+  const touring = useStore((s) => s.tour !== null)
+  const zoom = presenting ? { zoom: PRESENT_ZOOM } : undefined
   return (
-    <div className="pointer-events-none absolute inset-0 z-30 flex flex-col justify-between gap-3 p-3">
+    <div className="pointer-events-none absolute inset-0 z-30 flex flex-col justify-between gap-3 p-3" style={zoom}>
       <Loading />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-2">
@@ -30,13 +37,20 @@ export default function Hud() {
             </div>
             <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800">Mapa real · operación simulada</span>
           </Panel>
-          <Kpis />
+          <TourButtons />
+          {!touring && <Kpis />}
         </div>
-        <SimPanel />
+        {/* Durante un recorrido el panel se oculta para despejar la vista, sin perder lo que estaba abierto. */}
+        <div className={touring ? 'hidden' : 'contents'}>
+          <SimPanel />
+        </div>
       </div>
       <div className="flex flex-col gap-2">
         <div className="absolute bottom-[150px] left-3 right-3 sm:right-auto sm:bottom-[92px]">
           <InfoCard />
+        </div>
+        <div className="flex justify-center">
+          <TourCaption />
         </div>
         <TimeBar />
         <p className="pointer-events-auto mx-auto rounded-md bg-white/75 px-2 py-0.5 text-center text-[9.5px] text-slate-600 backdrop-blur sm:text-[10.5px]">

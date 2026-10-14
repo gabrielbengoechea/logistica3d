@@ -19,6 +19,7 @@ import Rtgs from './Rtgs'
 import Tractors from './Tractors'
 import { shipPose } from './pose'
 import { useZone } from './zone'
+import { TOURS } from '../didactic/tours'
 
 const fromTerminal = (x: number, y: number, z: number): [number, number, number] => {
   const [wx, wz] = toWorld(x, z)
@@ -59,6 +60,7 @@ function Follow({ controls }: { controls: React.RefObject<CameraControls | null>
 export default function Scene() {
   const controls = useRef<CameraControls>(null)
   const view = useStore((s) => s.view)
+  const tour = useStore((s) => s.tour)
   const zone = useZone('montevideo')
   const setZoneReady = useStore((s) => s.setZoneReady)
   useEffect(() => setZoneReady(zone !== null), [zone, setZoneReady])
@@ -86,6 +88,24 @@ export default function Scene() {
     }
     c.setLookAt(px, py, pz, tx, ty, tz, true)
   }, [view, zone])
+
+  // Recorrido guiado: vuelo lento entre encuadres; al terminar, vuelve a la vista elegida.
+  const touring = useRef(false)
+  useEffect(() => {
+    const c = controls.current
+    if (!c || !zone) return
+    const shot = tour && TOURS.find((x) => x.key === tour.key)?.steps[tour.step]?.shot
+    if (shot) {
+      touring.current = true
+      c.smoothTime = 1.4
+      c.setLookAt(...shot, true)
+    } else if (touring.current) {
+      touring.current = false
+      c.smoothTime = 0.25
+      const [px, py, pz, tx, ty, tz] = VIEWS[useStore.getState().view]
+      c.setLookAt(px, py, pz, tx, ty, tz, true)
+    }
+  }, [tour, zone])
 
   return (
     <>
