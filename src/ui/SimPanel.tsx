@@ -3,9 +3,7 @@ import { PRESETS, presetParams } from '../sim/presets'
 import { SHIP_CLASSES, type Kpis, type ShipClassKey, type SimParams } from '../sim/terminalSim'
 import { useStore } from '../store'
 import { hours, num, pct } from './format'
-import ActivityPanel from './ActivityPanel'
-import Panel from './Panel'
-import { Segmented } from './TimeBar'
+import { Segmented } from './controls'
 import WeekChart from './WeekChart'
 
 /** Control deslizante con su explicación, que se abre con "?". */
@@ -33,36 +31,46 @@ function Slider({
   const [open, setOpen] = useState(false)
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 text-[12px] text-slate-600">
-        <label htmlFor={id} className="flex items-center gap-1">
+      <div className="flex items-center justify-between gap-2 text-[14px]">
+        <label htmlFor={id} className="flex items-center gap-1.5">
           {label}
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-500 hover:bg-slate-200"
+            className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[var(--fill)] text-[11px] font-semibold text-[var(--ink-2)]"
             aria-label={`Qué es: ${label}`}
             aria-expanded={open}
           >
             ?
           </button>
         </label>
-        <span className="font-semibold tabular-nums text-slate-800">{format(value)}</span>
+        <span className="font-semibold tabular-nums">{format(value)}</span>
       </div>
-      {open && <p className="my-1 rounded-md bg-slate-50 px-2 py-1.5 text-[11.5px] leading-snug text-slate-600">{help}</p>}
-      <input id={id} type="range" className="w-full accent-blue-600" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      {open && <p className="my-1.5 rounded-lg bg-[#f2f2f7] px-2.5 py-2 text-[12.5px] leading-snug text-[var(--ink-2)]">{help}</p>}
+      <input
+        id={id}
+        type="range"
+        className="ios-range w-full"
+        style={{ ['--fill-to' as string]: `${((value - min) / (max - min)) * 100}%` }}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
     </div>
   )
 }
 
 function Section({ title, summary, children, open = false }: { title: string; summary: string; children: ReactNode; open?: boolean }) {
   return (
-    <details open={open} className="group rounded-xl border border-slate-200 bg-white/60">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2">
-        <span className="text-[12.5px] font-semibold text-slate-800">{title}</span>
-        <span className="truncate text-[11px] text-slate-500">{summary}</span>
-        <span className="text-slate-400 transition group-open:rotate-90">›</span>
+    <details open={open} className="group rounded-xl bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5">
+        <span className="text-[15px] font-semibold">{title}</span>
+        <span className="ml-auto truncate text-[13px] text-[var(--ink-2)]">{summary}</span>
+        <span className="text-[17px] text-[#c7c7cc] transition group-open:rotate-90">›</span>
       </summary>
-      <div className="space-y-3 px-3 pt-1 pb-3">{children}</div>
+      <div className="space-y-4 border-t border-[var(--separator)] px-3 pt-3 pb-4">{children}</div>
     </details>
   )
 }
@@ -83,37 +91,8 @@ function sameParams(a: SimParams, b: SimParams) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
-type Tab = 'sim' | 'act'
-
-export default function SimPanel() {
-  const [open, setOpen] = useState(() => window.innerWidth >= 900)
-  const [tab, setTab] = useState<Tab>('sim')
-
-  if (!open)
-    return (
-      <Panel className="px-3 py-2">
-        <button className="text-sm font-semibold text-blue-700" onClick={() => setOpen(true)}>
-          Simulador y actividades ▸
-        </button>
-      </Panel>
-    )
-
-  return (
-    <Panel className="max-h-[48vh] w-full overflow-y-auto p-4 sm:max-h-[calc(100vh-190px)] sm:w-[340px]">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex-1">
-          <Segmented items={['sim', 'act'] as const} value={tab} onChange={setTab} label={(v) => (v === 'sim' ? 'Simulador' : 'Actividades')} />
-        </div>
-        <button className="text-xs text-slate-400 hover:text-slate-600" onClick={() => setOpen(false)}>
-          ocultar
-        </button>
-      </div>
-      {tab === 'sim' ? <Simulator /> : <ActivityPanel onOpenSimulator={() => setTab('sim')} />}
-    </Panel>
-  )
-}
-
-function Simulator() {
+/** Simulador: escenarios, parámetros por grupo, gráfico de la semana y comparación con la base. */
+export function Simulator() {
   const params = useStore((s) => s.params)
   const result = useStore((s) => s.result)
   const base = useStore((s) => s.base)
@@ -128,23 +107,23 @@ function Simulator() {
 
   return (
     <>
-      <div className="mb-1 text-[10.5px] font-medium uppercase tracking-wide text-slate-400">Escenarios</div>
-      <div className="mb-2 flex flex-wrap gap-1.5">
+      <div className="px-1 pb-1.5 text-[13px] font-semibold text-[var(--ink-2)]">Escenarios</div>
+      <div className="mb-2.5 flex flex-wrap gap-1.5">
         {PRESETS.map((p) => (
           <button
             key={p.key}
             onClick={() => setParams({ ...presetParams(p), seed: params.seed, days: params.days })}
-            className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium ${active?.key === p.key ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'}`}
+            className={`h-8 rounded-full px-3 text-[13px] font-medium ${active?.key === p.key ? 'bg-[var(--accent)] text-white' : 'bg-white text-[var(--ink)] hover:bg-[#f2f2f7]'}`}
           >
             {p.label}
           </button>
         ))}
       </div>
-      <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-[12px] leading-snug text-blue-900">
+      <p className="mb-4 rounded-xl bg-[#e8f1ff] px-3 py-2.5 text-[13px] leading-snug text-[#0b3d91]">
         {active ? active.question : 'Escenario propio.'} <b>Antes de mirar los resultados, predecí qué va a pasar.</b>
       </p>
 
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <Section title="Llegadas" summary={`${num(params.shipsPerDay)} por día · ${params.arrivals === 'random' ? 'al azar' : 'programadas'}`} open>
           <Slider
             id="p-ships"
@@ -158,21 +137,21 @@ function Simulator() {
             onChange={(v) => setParam('shipsPerDay', v)}
           />
           <div>
-            <div className="mb-1 text-[12px] text-slate-600">Cómo llegan</div>
+            <div className="mb-1 text-[12px] text-[var(--ink-2)]">Cómo llegan</div>
             <Segmented
               items={['random', 'scheduled'] as const}
               value={params.arrivals}
               onChange={(v) => setParam('arrivals', v)}
               label={(v) => (v === 'random' ? 'Al azar' : 'Con itinerario')}
             />
-            <p className="mt-1 text-[11px] leading-snug text-slate-500">
+            <p className="mt-1 text-[11px] leading-snug text-[var(--ink-2)]">
               {params.arrivals === 'random'
                 ? 'Llegadas independientes: a veces se juntan varios buques y a veces no viene ninguno.'
                 : 'Servicios regulares con horario fijo y hasta 3 h de atraso o adelanto.'}
             </p>
           </div>
           <div>
-            <div className="mb-1 text-[12px] text-slate-600">Mezcla de buques</div>
+            <div className="mb-1 text-[12px] text-[var(--ink-2)]">Mezcla de buques</div>
             <div className="space-y-2">
               {(Object.keys(SHIP_CLASSES) as ShipClassKey[]).map((k) => {
                 const c = SHIP_CLASSES[k]
@@ -230,9 +209,9 @@ function Simulator() {
             onChange={(v) => setParam('movesPerCraneHour', v)}
           />
           <div>
-            <div className="mb-1 text-[12px] text-slate-600">Turnos de trabajo</div>
+            <div className="mb-1 text-[12px] text-[var(--ink-2)]">Turnos de trabajo</div>
             <Segmented items={[8, 16, 24] as const} value={params.craneHoursPerDay} onChange={(v) => setParam('craneHoursPerDay', v)} label={(v) => SHIFT_LABEL[v]} />
-            <p className="mt-1 text-[11px] leading-snug text-slate-500">
+            <p className="mt-1 text-[11px] leading-snug text-[var(--ink-2)]">
               {params.craneHoursPerDay === 24 ? 'Las grúas trabajan las 24 horas.' : params.craneHoursPerDay === 16 ? 'Las grúas trabajan de 6 a 22 h.' : 'Las grúas trabajan de 8 a 16 h.'} Fuera de turno, el buque espera amarrado.
             </p>
           </div>
@@ -319,27 +298,27 @@ function Simulator() {
             format={(v) => `${v} días`}
             onChange={(v) => setParam('days', v)}
           />
-          <div className="flex items-center justify-between gap-2 text-[12px] text-slate-600">
+          <div className="flex items-center justify-between gap-2 text-[12px] text-[var(--ink-2)]">
             <span>Semana n.º {params.seed}</span>
             <button
-              className="rounded-lg bg-slate-100 px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-200"
+              className="rounded-[10px] bg-[var(--fill)] px-3 py-1.5 text-[13px] font-semibold text-[var(--accent)]"
               onClick={() => setParam('seed', 1 + Math.floor(Math.random() * 999))}
             >
               Otra semana al azar
             </button>
           </div>
-          <p className="text-[11px] leading-snug text-slate-500">
+          <p className="text-[11px] leading-snug text-[var(--ink-2)]">
             Misma configuración, otras llegadas. Sirve para ver cuánto cambia el resultado solo por azar.
           </p>
         </Section>
       </div>
 
-      <div className="mt-4 border-t border-slate-200 pt-3">
+      <div className="mt-4 rounded-xl bg-white p-3">
         <WeekChart />
       </div>
 
-      <div className="mt-4 border-t border-slate-200 pt-3">
-        <div className="mb-1.5 grid grid-cols-[1fr_auto_auto] gap-x-3 text-[10.5px] font-medium uppercase tracking-wide text-slate-400">
+      <div className="mt-4 rounded-xl bg-white p-3">
+        <div className="mb-1.5 grid grid-cols-[1fr_auto_auto] gap-x-3 text-[12px] font-semibold text-[var(--ink-2)]">
           <span>Resultado del período</span>
           <span className="text-right">Base</span>
           <span className="text-right">Ahora</span>
@@ -350,22 +329,22 @@ function Simulator() {
           const diff = Math.abs(b - a) > 1e-6
           const good = r.better === 'low' ? b < a : b > a
           return (
-            <div key={r.label} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-3 py-0.5 text-[12px]">
-              <span className="text-slate-600">{r.label}</span>
-              <span className="text-right tabular-nums text-slate-400">{r.fmt(a)}</span>
-              <span className={`text-right font-semibold tabular-nums ${!diff ? 'text-slate-800' : good ? 'text-emerald-700' : 'text-rose-700'}`}>
+            <div key={r.label} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-3 border-t border-[var(--separator)] py-1.5 text-[13px]">
+              <span className="text-[var(--ink-2)]">{r.label}</span>
+              <span className="text-right tabular-nums text-[var(--ink-3)]">{r.fmt(a)}</span>
+              <span className={`text-right font-semibold tabular-nums ${!diff ? 'text-[var(--ink)]' : good ? 'text-[#248a3d]' : 'text-[#d70015]'}`}>
                 {diff ? (good ? '▲ ' : '▼ ') : ''}
                 {r.fmt(b)}
               </span>
             </div>
           )
         })}
-        <p className="mt-1 text-[10.5px] text-slate-400">▲ mejor que la base · ▼ peor que la base</p>
+        <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">▲ mejor que la base · ▼ peor que la base</p>
         <div className="mt-3 flex gap-2">
-          <button className="flex-1 rounded-lg bg-slate-100 px-2 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-200" onClick={resetToBase}>
+          <button className="h-9 flex-1 rounded-[10px] bg-[var(--fill)] px-2 text-[13px] font-semibold text-[var(--accent)]" onClick={resetToBase}>
             Volver a la base
           </button>
-          <button className="flex-1 rounded-lg bg-blue-600 px-2 py-1.5 text-[12px] font-medium text-white hover:bg-blue-700" onClick={saveBase}>
+          <button className="h-9 flex-1 rounded-[10px] bg-[var(--accent)] px-2 text-[13px] font-semibold text-white" onClick={saveBase}>
             Fijar como base
           </button>
         </div>

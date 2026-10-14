@@ -48,7 +48,7 @@ function Small({ metric, now, base, t, hover, setHover }: { metric: Metric; now:
 
   return (
     <figure className="m-0">
-      <figcaption className="mb-0.5 text-[11px] font-medium text-slate-600">{metric.title}</figcaption>
+      <figcaption className="mb-0.5 text-[11px] font-medium text-[var(--ink-2)]">{metric.title}</figcaption>
       <div className="relative">
         <svg
           viewBox={`0 0 ${W} ${H}`}
@@ -113,14 +113,14 @@ export default function WeekChart() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-3 text-[11px] text-slate-600">
+      <div className="flex items-center gap-3 text-[11px] text-[var(--ink-2)]">
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-4 rounded" style={{ background: NOW }} /> Este escenario
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-4 rounded" style={{ background: BASE }} /> Base
         </span>
-        <button className="ml-auto text-[11px] text-blue-700 hover:underline" onClick={() => setTable(!table)}>
+        <button className="ml-auto text-[11px] text-[var(--accent)] hover:underline" onClick={() => setTable(!table)}>
           {table ? 'Ver gráfico' : 'Ver datos'}
         </button>
       </div>
@@ -142,31 +142,31 @@ function DayTable({ now, base }: { now: SimResult; base: SimResult }) {
   }
   return (
     <table className="w-full text-[11px] tabular-nums">
-      <thead className="text-slate-500">
+      <thead className="text-[var(--ink-2)]">
         <tr>
           <th className="text-left font-medium">Día</th>
           <th className="text-right font-medium">Máx. en espera</th>
           <th className="text-right font-medium">Patio medio</th>
         </tr>
       </thead>
-      <tbody className="text-slate-700">
+      <tbody className="text-[var(--ink)]">
         {Array.from({ length: now.params.days }, (_, d) => {
           const a = byDay(now, d)
           const b = byDay(base, d)
           return (
-            <tr key={d} className="border-t border-slate-100">
+            <tr key={d} className="border-t border-[var(--separator)]">
               <td>D{d + 1}</td>
               <td className="text-right">
-                {a?.queue ?? '—'} <span className="text-slate-400">({b?.queue ?? '—'})</span>
+                {a?.queue ?? '—'} <span className="text-[var(--ink-3)]">({b?.queue ?? '—'})</span>
               </td>
               <td className="text-right">
-                {a ? `${num(a.yard, 0)} %` : '—'} <span className="text-slate-400">({b ? `${num(b.yard, 0)} %` : '—'})</span>
+                {a ? `${num(a.yard, 0)} %` : '—'} <span className="text-[var(--ink-3)]">({b ? `${num(b.yard, 0)} %` : '—'})</span>
               </td>
             </tr>
           )
         })}
       </tbody>
-      <caption className="caption-bottom pt-1 text-left text-[10.5px] text-slate-400">Entre paréntesis, la base.</caption>
+      <caption className="caption-bottom pt-1 text-left text-[10.5px] text-[var(--ink-3)]">Entre paréntesis, la base.</caption>
     </table>
   )
 }

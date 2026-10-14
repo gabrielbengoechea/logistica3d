@@ -7,9 +7,129 @@ body,
   margin: 0;
 }
 
+/*
+ * Estilo de la interfaz: materiales claros y translúcidos, listas agrupadas y controles al estilo de las apps
+ * de Apple. La letra es la del sistema: San Francisco en Mac, iPhone y iPad; en otros equipos, la más parecida.
+ */
+:root {
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #8e8e93;
+  --separator: rgba(60, 60, 67, 0.14);
+  --fill: rgba(118, 118, 128, 0.12);
+  --accent: #007aff;
+  --alert: #c93400;
+  /* Color de los íconos de las listas (ver data-icons más abajo). */
+  --icon-1: #007aff;
+  --icon-2: #ff9500;
+  --icon-3: #34c759;
+  --icon-4: #af52de;
+  --icon-fg: #ffffff;
+  --icon-alert-bg: #ff9500;
+  --icon-alert-fg: #ffffff;
+  --icon-link: #007aff;
+}
+
+[data-icons='azul'] {
+  --icon-1: #e3eeff;
+  --icon-3: #e3eeff;
+  --icon-4: #e3eeff;
+  --icon-fg: #0a6cff;
+  --icon-alert-bg: #fff0dc;
+  --icon-alert-fg: #d36a00;
+  --icon-link: #0a6cff;
+}
+
+[data-icons='grafito'] {
+  --icon-1: #2c2c2e;
+  --icon-3: #2c2c2e;
+  --icon-4: #2c2c2e;
+  --icon-fg: #ffffff;
+  --icon-link: #3a3a3c;
+}
+
+[data-icons='puerto'] {
+  --icon-1: #1f3557;
+  --icon-3: #3a6fd8;
+  --icon-4: #7c838c;
+  --icon-fg: #ffffff;
+  --icon-alert-bg: #e0703a;
+  --icon-link: #1f3557;
+}
+
+[data-icons='trazo'] {
+  --icon-1: transparent;
+  --icon-3: transparent;
+  --icon-4: transparent;
+  --icon-fg: #6e6e73;
+  --icon-alert-bg: transparent;
+  --icon-alert-fg: #e07000;
+  --icon-link: #6e6e73;
+}
+
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  color: #1e293b;
-  background: #eef3f8;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: #e9eef2;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Material translúcido de las tarjetas y barras flotantes. */
+.material {
+  background: rgba(246, 246, 248, 0.8);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.14);
+}
+
+/* Lista agrupada: filas blancas con separadores finos, dentro de una tarjeta redondeada. */
+.inset-list {
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+.inset-list > * + * {
+  border-top: 1px solid var(--separator);
+}
+
+/* Control deslizante al estilo iOS: riel fino, parte recorrida en azul y perilla blanca con sombra. */
+.ios-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  --fill-to: 0%;
+}
+.ios-range::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--accent) var(--fill-to), rgba(120, 120, 128, 0.22) var(--fill-to));
+}
+.ios-range::-moz-range-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(120, 120, 128, 0.22);
+}
+.ios-range::-moz-range-progress {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.ios-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8.5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+.ios-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
 }

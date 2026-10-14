@@ -13,6 +13,17 @@ export type Selection =
 export type View = 'terminal' | 'bahia' | 'escalas'
 /** Calidad gráfica: alta (sombras, oclusión ambiental y brillo), media (sin oclusión) o baja (sin efectos). */
 export type Quality = 'alta' | 'media' | 'baja'
+/** Color de los íconos de la interfaz (ver index.css). */
+export type IconTint = 'sistema' | 'azul' | 'grafito' | 'puerto' | 'trazo'
+
+function savedTint(): IconTint {
+  try {
+    const v = localStorage.getItem('l3-iconos') as IconTint | null
+    return v && ['sistema', 'azul', 'grafito', 'puerto', 'trazo'].includes(v) ? v : 'azul'
+  } catch {
+    return 'azul'
+  }
+}
 
 interface State {
   params: SimParams
@@ -44,6 +55,7 @@ interface State {
   presenting: boolean
   /** Comparación de tamaños (buques, cancha, edificios) en el mar, visible u oculta. */
   showScale: boolean
+  iconTint: IconTint
   /** Recorrido guiado en curso: cuál y en qué paso. */
   tour: { key: string; step: number } | null
 
@@ -66,6 +78,7 @@ interface State {
   setFeed: (ships: FeedShip[], events: SimEvent[]) => void
   setPresenting: (on: boolean) => void
   setShowScale: (on: boolean) => void
+  setIconTint: (tint: IconTint) => void
   setTour: (tour: { key: string; step: number } | null) => void
   advance: (dtSeconds: number) => void
 }
@@ -93,6 +106,7 @@ export const useStore = create<State>()((set, get) => ({
   feedTracks: [],
   presenting: false,
   showScale: false,
+  iconTint: savedTint(),
   tour: null,
 
   setParams: (params) => {
@@ -119,6 +133,14 @@ export const useStore = create<State>()((set, get) => ({
   setDayNight: (dayNight) => set({ dayNight }),
   setPresenting: (presenting) => set({ presenting }),
   setShowScale: (showScale) => set({ showScale }),
+  setIconTint: (iconTint) => {
+    try {
+      localStorage.setItem('l3-iconos', iconTint)
+    } catch {
+      // Sin almacenamiento: vale solo para esta sesión.
+    }
+    set({ iconTint })
+  },
   setTour: (tour) => set({ tour, follow: null, selection: null }),
   setFeed: (ships, events) => set({ feedTracks: buildPositionTracks(ships, events) }),
   advance: (dt) => {

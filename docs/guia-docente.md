@@ -11,13 +11,13 @@ Esta guía cubre los dos recorridos guiados y las cuatro actividades de clase. T
 
 ## Antes de la clase
 
-- Abrí la página en la computadora que va al proyector. Si la animación va a tirones, bajá la **Calidad** (abajo a la derecha) a *Media* o *Baja*.
-- **Presentar** (arriba a la izquierda) agranda la interfaz y pasa a pantalla completa, para leer desde el fondo del aula.
-- **Luz → Siempre de día** es más fácil de ver con proyector. *Según la hora* muestra la noche, que sirve para hablar de los turnos.
+- Abrí la página en la computadora que va al proyector. Si la animación va a tirones, en **Ajustes** (botón **⋯**, arriba a la derecha) bajá la calidad a *Media* o *Baja*.
+- **Presentar** (primer botón de arriba a la derecha) agranda la interfaz y pasa a pantalla completa, para leer desde el fondo del aula.
+- El botón del **sol o la luna** (arriba a la derecha) deja la luz siempre de día, más fácil de ver con proyector; con la luna, la luz sigue la hora y muestra la noche, que sirve para hablar de los turnos.
 
 ## Recorridos guiados (5 minutos cada uno)
 
-Están arriba a la izquierda, en **Recorridos**. La cámara vuela sola de un punto a otro con un texto corto en cada uno. Avanzan cada 9 segundos; con **Auto** se pausa el avance, y también se puede ir y volver con las flechas del teclado. **Esc** termina el recorrido.
+Están en el panel de la izquierda, en **Explorar → Recorridos guiados**. La cámara vuela sola de un punto a otro con un texto corto en cada uno. Avanzan cada 9 segundos; con **Pausar** se detiene el avance, y también se puede ir y volver con las flechas del teclado. **Esc** termina el recorrido.
 
 | Recorrido | Pasos | Para qué sirve |
 | --- | --- | --- |
@@ -28,7 +28,7 @@ Conviene hacer los dos recorridos al principio de la primera clase.
 
 ## Actividades (15 minutos cada una)
 
-Están en el panel de la derecha, en la pestaña **Actividades**. Todas siguen el mismo esquema:
+Están en el panel de la izquierda, en **Explorar → Actividades**. Todas siguen el mismo esquema:
 
 1. **Contexto y pregunta.** Se lee en voz alta.
 2. **Predicción.** Cada estudiante (o grupo) elige una opción *antes* de simular. El botón *Simular* no se habilita sin una predicción.
@@ -46,7 +46,7 @@ Los valores de referencia que aparecen abajo son de la semana que se abre por de
 - **Respuesta esperada:** mucho más que el tráfico. En la semana de referencia la espera se multiplica por 4 (de 6,7 h a 27 h), con los muelles ocupados el 90 % del tiempo.
 - **Por qué:** cerca del límite de capacidad, cada buque extra tiene que esperar a que termine otro, y los atrasos se encadenan. Las colas no son lineales.
 - **Error común:** pensar que con 40 % más buques la espera crece un 40 %.
-- **Para seguir:** probar con 3 buques por día en la pestaña *Simulador* y buscar dónde empieza a dispararse la espera.
+- **Para seguir:** probar con 3 buques por día en *Explorar → Simulador* y buscar dónde empieza a dispararse la espera.
 
 ### 2. Paro de camiones
 
@@ -77,7 +77,7 @@ Los valores de referencia que aparecen abajo son de la semana que se abre por de
 
 ## Después de las actividades: el simulador libre
 
-La pestaña **Simulador** tiene escenarios listos y todos los parámetros, cada uno con una explicación en el botón **?**. Al terminar una actividad, la comparación ya queda armada: la *base* es la terminal normal y *ahora* es el escenario de la actividad. Así los estudiantes pueden seguir cambiando cosas desde ahí.
+**Explorar → Simulador** tiene escenarios listos y todos los parámetros, cada uno con una explicación en el botón **?**. Al terminar una actividad, la comparación ya queda armada: la *base* es la terminal normal y *ahora* es el escenario de la actividad. Así los estudiantes pueden seguir cambiando cosas desde ahí.
 
 - **Fijar como base** guarda el escenario actual para comparar contra él.
 - **Volver a la base** deshace los cambios.

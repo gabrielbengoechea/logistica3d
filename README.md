@@ -30,13 +30,20 @@ El botón **Mover** despliega los mismos controles en pantalla. Tocar un buque, 
 
 Ver `docs/guia-docente.md`.
 
-- **Actividades** (pestaña del panel derecho): Temporada alta, Paro de camiones, Un solo turno y Llegadas con
+- **Actividades** (panel izquierdo, Explorar): Temporada alta, Paro de camiones, Un solo turno y Llegadas con
   itinerario. Cada una cambia un solo parámetro. El alumno predice antes de simular; después ve la respuesta
   correcta (calculada con la simulación, no escrita de antemano), la explicación con los números de esa corrida
   y preguntas para discutir.
 - **Recorridos guiados**: "Del río al muelle" y "La terminal por dentro". La cámara vuela entre encuadres con un
   texto corto en cada uno (flechas para avanzar, Esc para salir).
 - **Presentar**: agranda la interfaz y pasa a pantalla completa para el pizarrón.
+
+## Interfaz
+
+Al estilo de las apps de Apple (Mapas, Ajustes): materiales claros translúcidos, listas agrupadas y la letra del
+sistema. Barra lateral con el título, "Ahora" (indicadores) y "Explorar" (simulador, actividades, recorridos); la ficha
+de lo que se toca en la escena aparece ahí mismo. Arriba, las vistas; a la derecha, presentar, luz y ajustes; abajo, el
+reproductor. El color de los íconos se elige en Ajustes (sistema, azul, grafito, puerto o solo trazo).
 
 ## Gráficos
 
@@ -51,7 +58,7 @@ Ver `docs/guia-docente.md`.
   Antel y un Post-Panamax puesto de pie.
 - Operación animada: grúas de muelle, straddle carriers que llevan los contenedores entre el muelle y el patio,
   camiones, estelas, remolcadores al atracar y amarras al muelle.
-- Calidad **alta**, **media** o **baja** (barra inferior). Si el equipo no da abasto, baja sola un nivel;
+- Calidad **alta**, **media** o **baja** (Ajustes, botón ⋯ arriba a la derecha). Si el equipo no da abasto, baja sola un nivel;
   elegirla a mano la deja fija.
 
 ## El simulador
@@ -90,7 +97,8 @@ src/
   sim/tracks.ts        recorrido de cada buque a partir de los eventos
   feeds/positions.ts   recorridos a partir de posiciones externas (la puerta para datos reales)
   scene/               escena 3D: mapa, puerto, terminal, buques, grúas, patio, straddle carriers, agua, cielo, luz, efectos
-  ui/                  indicadores, panel del simulador y actividades, recorridos, gráfico, fichas y línea de tiempo
+  ui/                  interfaz al estilo de las apps de Apple: barra lateral (indicadores, simulador, actividades,
+                       recorridos, fichas), controles del mapa, ajustes y reproductor
 public/zones/          datos de cada zona (relieve, imagen, geometría)
 tools/zone/            script que genera los datos de una zona (TypeScript, corre con Node)
 docs/                  guía docente, datos reales para el futuro y borradores de pedidos de datos

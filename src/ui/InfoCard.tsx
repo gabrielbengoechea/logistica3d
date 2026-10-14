@@ -4,35 +4,35 @@ import { SHIP_CLASSES, cranesOnShift, sampleAt } from '../sim/terminalSim'
 import { PHASE_LABEL, phaseAt } from '../sim/tracks'
 import { useStore } from '../store'
 import { clock, hours, num, pct } from './format'
-import Panel from './Panel'
+import { Icon } from './icons'
 
 const PITCH_M = 105
 
 function Card({ kicker, title, rows, note, children, action }: { kicker: string; title: string; rows: [string, string][]; note: string; children?: ReactNode; action?: ReactNode }) {
   const select = useStore((s) => s.select)
   return (
-    <Panel className="w-full p-4 sm:w-[300px]">
+    <div>
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-blue-600">{kicker}</div>
-          <div className="text-base font-semibold text-slate-800">{title}</div>
+          <div className="text-[13px] font-semibold text-[var(--accent)]">{kicker}</div>
+          <div className="text-[22px] font-bold leading-tight tracking-tight text-[var(--ink)]">{title}</div>
         </div>
-        <button className="text-slate-400 hover:text-slate-600" onClick={() => select(null)} aria-label="Cerrar">
-          ✕
+        <button className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[var(--fill)] text-[var(--ink-2)]" onClick={() => select(null)} aria-label="Cerrar">
+          <Icon name="cerrar" size={13} stroke={3} />
         </button>
       </div>
       {children}
-      <dl className="mt-2 space-y-1">
+      <dl className="inset-list mt-3">
         {rows.map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-3 text-[12px]">
-            <dt className="text-slate-500">{k}</dt>
-            <dd className="text-right font-medium tabular-nums text-slate-800">{v}</dd>
+          <div key={k} className="flex justify-between gap-3 px-3 py-2 text-[14px]">
+            <dt className="text-[var(--ink-2)]">{k}</dt>
+            <dd className="text-right font-medium tabular-nums text-[var(--ink)]">{v}</dd>
           </div>
         ))}
       </dl>
-      <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-900">{note}</p>
+      <p className="mt-3 rounded-xl bg-[#fff4e0] px-3 py-2.5 text-[13px] leading-snug text-[#7a4a00]">{note}</p>
       {action}
-    </Panel>
+    </div>
   )
 }
 
@@ -41,7 +41,7 @@ function FollowButton({ id }: { id: string }) {
   const setFollow = useStore((s) => s.setFollow)
   return (
     <button
-      className={`mt-3 w-full rounded-lg px-2 py-1.5 text-[12px] font-medium ${follow === id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+      className={`mt-3 h-10 w-full rounded-[12px] text-[15px] font-semibold ${follow === id ? 'bg-[var(--accent)] text-white' : 'bg-[var(--fill)] text-[var(--accent)] font-semibold'}`}
       onClick={() => setFollow(follow === id ? null : id)}
     >
       {follow === id ? 'Dejar de seguir' : 'Seguir con la cámara'}
@@ -92,12 +92,12 @@ export default function InfoCard() {
       >
         {phase === 'working' && (
           <div className="mt-2">
-            <div className="flex justify-between text-[11px] text-slate-500">
+            <div className="flex justify-between text-[11px] text-[var(--ink-2)]">
               <span>Descarga</span>
               <span className="tabular-nums">{pct(u)}</span>
             </div>
-            <div className="mt-1 h-1.5 rounded-full bg-slate-100">
-              <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: pct(u) }} />
+            <div className="mt-1 h-1.5 rounded-full bg-[var(--fill)]">
+              <div className="h-1.5 rounded-full bg-[#34c759]" style={{ width: pct(u) }} />
             </div>
           </div>
         )}
