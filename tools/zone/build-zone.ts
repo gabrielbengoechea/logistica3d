@@ -55,8 +55,8 @@ const ZONES: Record<string, Zone> = {
     demTile: 'Copernicus_DSM_COG_10_S35_00_W057_00_DEM',
     epsg: 32721,
     proj: '+proj=utm +zone=21 +south +datum=WGS84 +units=m +no_defs',
-    // Frente de muelle de la terminal de contenedores, medido sobre la imagen Sentinel-2.
-    terminal: { x: -685, z: 317, yaw: 0.511, quayLength: 630 },
+    // Muelle de Escala de la terminal de contenedores (TCP), medido sobre el contorno del puerto en OpenStreetMap.
+    terminal: { x: -693.4, z: 323.1, yaw: 0.5461, quayLength: 632 },
   },
 }
 

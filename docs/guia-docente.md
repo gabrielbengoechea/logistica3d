@@ -22,7 +22,7 @@ Están arriba a la izquierda, en **Recorridos**. La cámara vuela sola de un pun
 | Recorrido | Pasos | Para qué sirve |
 | --- | --- | --- |
 | **Del río al muelle** | Río de la Plata, canal de acceso, fondeadero, boca entre escolleras, terminal, puerto y ciudad | Ubicar el puerto y entender por qué un buque no llega directo al muelle |
-| **La terminal por dentro** | Muelle, grúas pórtico, tractores, patio y RTG, portería, todo junto | Presentar la cadena buque → grúa → tractor → patio → camión antes de las actividades |
+| **La terminal por dentro** | Muelle de Escala, grúas pórtico, straddle carriers, patio, camiones y portería, la ampliación, todo junto | Presentar la cadena buque → grúa → straddle carrier → patio → camión antes de las actividades |
 
 Conviene hacer los dos recorridos al principio de la primera clase.
 
@@ -89,7 +89,7 @@ Una consigna abierta que funciona bien: *"Con temporada alta, encontrá el cambi
 
 - La operación es simulada. No reproduce la terminal real ni sus números. Los valores por defecto son razonables, no oficiales.
 - Solo modela la descarga de contenedores. No modela la carga, los vacíos, los reefers ni el ferrocarril.
-- Los tractores, camiones y RTG de la escena son ilustrativos: su cantidad y su recorrido no salen del simulador.
-- El muelle 3 es una ampliación hipotética.
+- Los straddle carriers y los camiones de la escena son ilustrativos: su cantidad y su recorrido no salen del simulador.
+- El muelle 3 es la ampliación de TCP, que hoy está en construcción; su trazado en la escena es aproximado.
 
 Estos límites también son material de clase: *¿qué le falta al modelo para parecerse más a la realidad?*

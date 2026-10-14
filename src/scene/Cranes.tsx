@@ -5,7 +5,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { cranesOnShift } from '../sim/terminalSim'
 import { phaseAt } from '../sim/tracks'
 import { useStore } from '../store'
-import { LAND_Y, craneX } from './layout'
+import { BERTHS, LAND_Y, craneLocalX } from './layout'
 import { box, getContainerTexture, getHaloTexture, strut } from './materials'
 import { useGlowMaterial, useHaloMaterial } from './useGlow'
 
@@ -51,13 +51,21 @@ function buildDetails() {
 let shared: { frame: THREE.BufferGeometry; details: THREE.BufferGeometry } | null = null
 const geometries = () => (shared ??= { frame: buildFrame(), details: buildDetails() })
 
+/** Grúas de cada puesto habilitado, en el marco de su muelle (el tercero está sobre la ampliación, en otra cara). */
 export default function Cranes() {
   const berths = useStore((s) => s.params.berths)
   const n = useStore((s) => s.params.cranesPerBerth)
-  const items = []
-  for (let b = 0; b < berths; b++)
-    for (let i = 0; i < n; i++) items.push(<Crane key={`${b}-${i}`} berth={b} index={i} x={craneX(b, i, n)} />)
-  return <>{items}</>
+  return (
+    <>
+      {BERTHS.slice(0, berths).map((b, bi) => (
+        <group key={bi} position={[b.x, 0, b.z]} rotation-y={b.a}>
+          {Array.from({ length: n }, (_, i) => (
+            <Crane key={i} berth={bi} index={i} x={craneLocalX(i, n)} />
+          ))}
+        </group>
+      ))}
+    </>
+  )
 }
 
 function Crane({ berth, index, x }: { berth: number; index: number; x: number }) {
@@ -129,11 +137,11 @@ function Crane({ berth, index, x }: { berth: number; index: number; x: number })
             <meshStandardMaterial color="#475569" />
           </mesh>
           <mesh position={[0, 0.3, 0]}>
-            <boxGeometry args={[2.8, 0.6, 12.6]} />
+            <boxGeometry args={[12.6, 0.6, 2.8]} />
             <meshStandardMaterial color="#f2c230" />
           </mesh>
           <mesh position={[0, -1.3, 0]} castShadow>
-            <boxGeometry args={[2.44, 2.6, 12.2]} />
+            <boxGeometry args={[12.2, 2.6, 2.44]} />
             <meshStandardMaterial color="#f47c3c" map={getContainerTexture()} roughness={0.7} />
           </mesh>
         </group>

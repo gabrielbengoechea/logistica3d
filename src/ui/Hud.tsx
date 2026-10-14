@@ -56,8 +56,8 @@ export default function Hud() {
         </div>
         <TimeBar />
         <p className="pointer-events-auto mx-auto rounded-md bg-white/75 px-2 py-0.5 text-center text-[9.5px] text-slate-600 backdrop-blur sm:text-[10.5px]">
-          Relieve: Copernicus DEM · Imagen: Copernicus Sentinel-2 (feb 2026) · Edificios: Overture Maps / © colaboradores de OpenStreetMap (ODbL) ·
-          Ubicación y frente del muelle reales; patio, grúas, buques y operación simulados · tocá un buque, una grúa o el patio
+          Relieve: Copernicus DEM · Imagen: Copernicus Sentinel-2 (feb 2026) · Edificios y contorno del puerto: Overture Maps / © colaboradores de OpenStreetMap (ODbL) ·
+          Partes del puerto y datos de TCP: ANP · Operación simulada · tocá un buque, una grúa o el patio
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { MOUTH, TERMINAL, anchorageSlot, berthX, toWorld } from '../scene/layout'
+import { BERTHS, MOUTH, TERMINAL, anchorageSlot, toWorld } from '../scene/layout'
 
 /** Encuadre de cámara: posición y punto mirado, en el marco del mapa. */
 export type Shot = [number, number, number, number, number, number]
@@ -52,8 +52,13 @@ export const TOURS: Tour[] = [
       },
       {
         title: 'La terminal de contenedores',
-        text: 'Un frente de unos 630 m, con lugar para dos buques grandes. La ubicación y el frente son reales; las máquinas y la operación que se ven son simuladas.',
+        text: 'La Terminal Cuenca del Plata (TCP) ocupa la punta del puerto: unas 60 ha y un muelle de 638 m. La forma del puerto y de la terminal son reales; las máquinas y la operación que se ven son simuladas.',
         shot: inTerminal(300, 300, -700, 0, 0, 80),
+      },
+      {
+        title: 'El resto del puerto',
+        text: 'Detrás del dique de cintura están las dársenas I y II con los muelles A, B y C, la terminal de pasajeros, la de celulosa de UPM y la de graneles (TGM). En total, más de 4.500 m de muelles.',
+        shot: [-400, 1500, -1900, 600, 0, -300],
       },
       {
         title: 'El puerto y la ciudad',
@@ -67,34 +72,39 @@ export const TOURS: Tour[] = [
     title: 'La terminal por dentro',
     steps: [
       {
-        title: 'El muelle',
-        text: 'Los buques amarran de costado al muelle. Mientras están amarrados ocupan un sitio de atraque: si los dos están ocupados, el siguiente espera afuera.',
-        shot: inTerminal(60, 200, -560, 0, 15, 20),
+        title: 'El Muelle de Escala',
+        text: 'TCP atiende los buques en el Muelle de Escala: 638 m con dos puestos, uno de 350 m a 14 m de profundidad y otro de 288 m a 10,5 m. Si los dos están ocupados, el siguiente espera afuera.',
+        shot: inTerminal(60, 220, -600, 0, 15, 20),
       },
       {
         title: 'Grúas pórtico (STS)',
-        text: 'Cada grúa saca un contenedor por vez del buque y lo baja al muelle: entre 20 y 30 por hora. Varias grúas trabajan sobre el mismo buque a la vez.',
-        shot: inTerminal(berthX(0) + 230, 95, -250, berthX(0), 30, 0),
+        text: 'Seis grúas de muelle: cuatro Super Post-Panamax que alcanzan 22 filas de contenedores y dos Post-Panamax de 19 filas. Cada una saca un contenedor por vez, entre 20 y 30 por hora.',
+        shot: inTerminal(BERTHS[0].x + 230, 95, -250, BERTHS[0].x, 30, 0),
       },
       {
-        title: 'Tractores de terminal',
-        text: 'Bajo la grúa, un tractor recibe el contenedor y lo lleva al patio. Si no hay tractor o el patio está lleno, la grúa tiene que esperar.',
-        shot: inTerminal(berthX(0) + 70, 130, 290, berthX(0), 0, 55),
+        title: 'Straddle carriers',
+        text: 'Bajo la grúa, un straddle carrier pasa a caballo sobre el contenedor, lo levanta entre sus patas y lo lleva al patio. Si no hay uno libre o el patio está lleno, la grúa tiene que esperar.',
+        shot: inTerminal(BERTHS[0].x + 90, 90, 230, BERTHS[0].x, 0, 90),
       },
       {
-        title: 'El patio y las RTG',
-        text: 'Los contenedores se apilan en bloques mientras esperan su trámite. Las grúas de patio (RTG) los acomodan y los cargan en los camiones. Apilar más alto da lugar, pero hace más lento sacar el de abajo.',
-        shot: inTerminal(360, 95, 100, 80, 5, 190),
+        title: 'El patio',
+        text: 'Los contenedores esperan su trámite en filas de un contenedor de ancho, separadas para que pasen las patas de las máquinas. TCP tiene 37 ha operativas y unas 3.000 tomas para contenedores refrigerados.',
+        shot: inTerminal(380, 110, 200, 0, 5, 380),
       },
       {
-        title: 'La portería',
-        text: 'Por acá salen los camiones con los contenedores hacia los depósitos y clientes. Si salen menos de los que entran por el muelle, el patio se llena y todo se frena.',
-        shot: inTerminal(120, 55, 250, 0, 6, 345),
+        title: 'Camiones y portería',
+        text: 'Los camiones entran por el Acceso Washington, reciben el contenedor al sur del patio y salen hacia depósitos y clientes. Si salen menos de los que entran por el muelle, el patio se llena y todo se frena.',
+        shot: inTerminal(330, 70, 560, 150, 4, 670),
+      },
+      {
+        title: 'La ampliación',
+        text: 'Sobre la cara oeste se construye un muelle nuevo de 730 m con dos puestos, para buques de hasta 16 m de calado, y 24 ha más de patio. En el simulador es el tercer muelle.',
+        shot: inTerminal(-820, 260, 120, -430, 0, 400),
       },
       {
         title: 'Todo junto',
-        text: 'Buque, grúa, tractor, patio y camión forman una cadena: la más lenta marca el ritmo de todas. Con el simulador se puede probar dónde está el cuello de botella.',
-        shot: inTerminal(420, 380, 780, 0, 0, 60),
+        text: 'Buque, grúa, straddle carrier, patio y camión forman una cadena: la más lenta marca el ritmo de todas. Con el simulador se puede probar dónde está el cuello de botella.',
+        shot: inTerminal(520, 520, 1150, -60, 0, 280),
       },
     ],
   },

@@ -1,5 +1,5 @@
 import { phaseAt, type Phase, type PhaseParams, type Track } from '../sim/tracks'
-import { ENTRY, MOUTH, TERMINAL, TURN, anchorageSlot, berthPos, offBerthPos, type P2 } from './layout'
+import { ENTRY, MOUTH, TURN, anchorageSlot, berthPos, berthYaw, offBerthPos, type P2 } from './layout'
 
 const ease = (u: number) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u))
 const lerp2 = (a: P2, b: P2, u: number): P2 => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]
@@ -78,6 +78,13 @@ export function shipPose(tr: Track, t: number, params: PhaseParams): Pose {
   const beam = tr.ship.beam
   const off = offBerthPos(b, beam)
   const at = berthPos(b, beam)
+  const yaw = berthYaw(b)
+  // Los puestos del Muelle de Escala se alcanzan girando frente a él; el de la ampliación (cara oeste),
+  // directo desde la boca del antepuerto.
+  const inbound: P2[] = b === 2 ? [slot, MOUTH, off] : [slot, MOUTH, TURN, off]
+  const outbound: P2[] = b === 2 ? [off, MOUTH, ENTRY] : [off, TURN, MOUTH, ENTRY]
+  const before = inbound[inbound.length - 2]
+  const after = outbound[1]
 
   switch (phase) {
     case 'hidden':
@@ -91,18 +98,18 @@ export function shipPose(tr: Track, t: number, params: PhaseParams): Pose {
     case 'berthing': {
       // Entra por la boca del puerto, gira frente al muelle y los remolcadores lo empujan de costado.
       if (u < 0.7) {
-        const a = along([slot, MOUTH, TURN, off], ease(u / 0.7))
+        const a = along(inbound, ease(u / 0.7))
         return pose(a.p, lerpAngle(hAnchor, a.yaw, Math.min(1, u / 0.1)), 1)
       }
       const v = (u - 0.7) / 0.3
-      return pose(lerp2(off, at, ease(v)), lerpAngle(heading(TURN, off), TERMINAL.yaw, ease(Math.min(1, v * 1.6))), 1)
+      return pose(lerp2(off, at, ease(v)), lerpAngle(heading(before, off), yaw, ease(Math.min(1, v * 1.6))), 1)
     }
     case 'working':
-      return pose(at, TERMINAL.yaw, 1 - u)
+      return pose(at, yaw, 1 - u)
     case 'unberthing':
-      return pose(lerp2(at, off, ease(u)), lerpAngle(TERMINAL.yaw, heading(off, TURN), ease(Math.max(0, (u - 0.5) / 0.5))), 0)
+      return pose(lerp2(at, off, ease(u)), lerpAngle(yaw, heading(off, after), ease(Math.max(0, (u - 0.5) / 0.5))), 0)
     case 'leaving': {
-      const a = along([off, TURN, MOUTH, ENTRY], ease(u))
+      const a = along(outbound, ease(u))
       return pose(a.p, a.yaw, 0)
     }
   }

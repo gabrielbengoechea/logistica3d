@@ -49,7 +49,7 @@ Ver `docs/guia-docente.md`.
 - Comparación de tamaños en mar abierto (interruptor "Comparar tamaños" y vista "Tamaños"): buques de 170, 300
   y 400 m con regla, la cancha del Centenario, una manzana del Centro, contenedores, el Palacio Salvo, la Torre
   Antel y un Post-Panamax puesto de pie.
-- Operación animada: grúas de muelle, grúas de patio (RTG), tractores que llevan contenedores al patio,
+- Operación animada: grúas de muelle, straddle carriers que llevan los contenedores entre el muelle y el patio,
   camiones, estelas, remolcadores al atracar y amarras al muelle.
 - Calidad **alta**, **media** o **baja** (barra inferior). Si el equipo no da abasto, baja sola un nivel;
   elegirla a mano la deja fija.
@@ -73,7 +73,10 @@ base, en una tabla y en un gráfico hora por hora (buques esperando y ocupación
 
 - Los buques solo descargan; la carga de exportación no está modelada.
 - Sin ventanas de atraque ni prioridades: el primero que llega, primero atraca.
-- El frente de muelle (~630 m, dos sitios) es el real; el muelle 3 es una ampliación hipotética.
+- El puerto es el real: su contorno sale de OpenStreetMap y sus partes, del plano de la ANP ("Muelles y
+  Terminales"). En TCP, el Muelle de Escala (638 m, dos puestos), las 6 grúas de muelle y el uso de straddle
+  carriers siguen el folleto de la ANP 2025; el muelle 3 es la ampliación de la cara oeste (730 m, en
+  construcción), con trazado aproximado.
   Patio, grúas y productividad son típicos, no los de la terminal real.
 
 ## Cómo está armado
@@ -86,7 +89,7 @@ src/
   sim/events.ts        formato de eventos común (simulador hoy, datos reales después)
   sim/tracks.ts        recorrido de cada buque a partir de los eventos
   feeds/positions.ts   recorridos a partir de posiciones externas (la puerta para datos reales)
-  scene/               escena 3D: mapa, terminal, buques, grúas, patio, tractores, agua, cielo, luz del día, efectos
+  scene/               escena 3D: mapa, puerto, terminal, buques, grúas, patio, straddle carriers, agua, cielo, luz, efectos
   ui/                  indicadores, panel del simulador y actividades, recorridos, gráfico, fichas y línea de tiempo
 public/zones/          datos de cada zona (relieve, imagen, geometría)
 tools/zone/            script que genera los datos de una zona (TypeScript, corre con Node)
@@ -101,6 +104,10 @@ El 3D es una capa sobre los datos: el simulador escribe eventos (`arrive`, `bert
 - Relieve: Copernicus DEM GLO-30, © DLR e.V. 2010-2014 y © Airbus Defence and Space GmbH 2014-2018, provisto bajo COPERNICUS por la Unión Europea y la ESA.
 - Imagen: Copernicus Sentinel-2 (escena del 8 de febrero de 2026), datos abiertos de Copernicus.
 - Edificios y geometría: Overture Maps Foundation, con datos © colaboradores de OpenStreetMap (ODbL).
+- Puerto: contorno del recinto, escolleras y dique de cintura de OpenStreetMap (vía Overture). Nombres y usos de
+  muelles, dársenas y terminales según el plano "Muelles y Terminales" de la ANP; datos de TCP (muelle, grúas,
+  straddle carriers, ampliación) según el folleto del puerto de Montevideo 2025 de la ANP
+  (https://www.anp.com.uy/es/inicio/puertos/comerciales/montevideo).
 
 ## Publicación
 

@@ -6,12 +6,13 @@ import { CONTAINER_COLORS, LAND_Y } from './layout'
 import { getContainerTexture } from './materials'
 import { useGlowMaterial } from './useGlow'
 
-// Circuito de los camiones: calle del muelle, lateral, calle trasera y vuelta.
+// Circuito de los camiones: entran por la portería (Acceso Washington), recorren la zona de entrega al sur
+// del patio, donde los straddle carriers les cargan el contenedor, y vuelven a salir.
 const PATH: [number, number][] = [
-  [-330, 78],
-  [330, 78],
-  [330, 300],
-  [-330, 300],
+  [205, 628],
+  [-330, 628],
+  [-330, 660],
+  [205, 660],
 ]
 const SEGMENTS = PATH.map((a, i) => {
   const b = PATH[(i + 1) % PATH.length]

@@ -16,8 +16,7 @@ import TerminalPad from './TerminalPad'
 import Trucks from './Trucks'
 import World from './World'
 import Yard from './Yard'
-import Rtgs from './Rtgs'
-import Tractors from './Tractors'
+import StraddleCarriers from './StraddleCarriers'
 import { shipPose } from './pose'
 import { useZone } from './zone'
 import { TOURS } from '../didactic/tours'
@@ -30,7 +29,7 @@ const fromTerminal = (x: number, y: number, z: number): [number, number, number]
 
 /** Cámara de cada vista: posición y punto mirado, en el marco del mapa. */
 export const VIEWS: Record<View, [number, number, number, number, number, number]> = {
-  terminal: [...fromTerminal(380, 360, 760), ...fromTerminal(0, 0, 40)],
+  terminal: [...fromTerminal(460, 430, 1080), ...fromTerminal(-60, 0, 260)],
   bahia: [2600, 5200, 7600, -1300, 0, 1200],
   escalas: [SCALE_AT[0] + 220, 600, SCALE_AT[1] + 480, SCALE_AT[0] - 140, 30, SCALE_AT[1] - 160],
 }
@@ -179,10 +178,9 @@ export default function Scene() {
       <group position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
         <TerminalPad />
         <Yard />
-        <Rtgs />
         <Cranes />
         <Trucks />
-        <Tractors />
+        <StraddleCarriers />
       </group>
       <Ships />
       <FeedShips />

@@ -32,9 +32,9 @@
     "source": "Overture Maps (incluye datos de OpenStreetMap, ODbL)"
   },
   "terminal": {
-    "x": -685,
-    "z": 317,
-    "yaw": 0.511,
-    "quayLength": 630
+    "x": -693.4,
+    "z": 323.1,
+    "yaw": 0.5461,
+    "quayLength": 632
   }
 }

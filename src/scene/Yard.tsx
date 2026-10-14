@@ -47,7 +47,7 @@ export default function Yard() {
         select({ kind: 'yard' })
       }}
     >
-      <boxGeometry args={[12.2, 2.5, 2.4]} />
+      <boxGeometry args={[2.44, 2.5, 12.19]} />
       <meshStandardMaterial map={getContainerTexture()} roughness={0.75} />
     </instancedMesh>
   )

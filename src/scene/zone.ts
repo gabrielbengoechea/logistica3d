@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-/** Datos de una zona preparados por tools/pipeline/build_zone.py. */
+/** Datos de una zona preparados por tools/zone/build-zone.ts. */
 export interface ZoneMeta {
   name: string
   extent: { xmin: number; xmax: number; zmin: number; zmax: number }
@@ -11,6 +11,10 @@ export interface ZoneMeta {
 
 export interface ZoneVectors {
   buildings: { h: number; ring: [number, number][] }[]
+  /** Muelles, escolleras y espigones (OpenStreetMap): polígonos o líneas. */
+  piers?: { class: string; name: string | null; ring?: [number, number][]; line?: [number, number][] }[]
+  /** Áreas industriales y portuarias, entre ellas el recinto del puerto. */
+  areas?: { class: string; name: string | null; ring: [number, number][] }[]
 }
 
 export interface Zone {

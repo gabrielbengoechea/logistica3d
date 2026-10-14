@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { ENTRY, MOUTH, PAD, anchorageSlot, toTerminal } from './layout'
+import { ENTRY, LAND_Y, MOUTH, PAD, anchorageSlot, toTerminal } from './layout'
 import { SHARED } from './environment'
 import Tag from './Tag'
+import { Breakwaters, PortLabels, PortLand, inRing, portRing } from './Port'
 import { heightAt, type Zone } from './zone'
 
 const insidePad = (x: number, z: number, margin: number) => {
@@ -25,6 +26,11 @@ function Terrain({ zone }: { zone: Zone }) {
 
   const geometry = useMemo(() => {
     const { extent, terrain } = zone.meta
+    const port = portRing(zone)
+    const [pxmin, pxmax, pzmin, pzmax] = port
+      ? [Math.min(...port.map((p) => p[0])), Math.max(...port.map((p) => p[0])), Math.min(...port.map((p) => p[1])), Math.max(...port.map((p) => p[1]))]
+      : [0, 0, 0, 0]
+    const inPort = (x: number, z: number) => !!port && x > pxmin && x < pxmax && z > pzmin && z < pzmax && inRing(port, x, z)
     const g = new THREE.PlaneGeometry(extent.xmax - extent.xmin, extent.zmax - extent.zmin, terrain.cols - 1, terrain.rows - 1)
     g.rotateX(-Math.PI / 2)
     g.translate((extent.xmin + extent.xmax) / 2, 0, (extent.zmin + extent.zmax) / 2)
@@ -33,7 +39,8 @@ function Terrain({ zone }: { zone: Zone }) {
       const x = pos.getX(i)
       const z = pos.getZ(i)
       let h = zone.heights[i]
-      if (insidePad(x, z, 60)) h = Math.min(h, 1)
+      // Bajo el recinto portuario el relieve queda por debajo de la explanada de los muelles.
+      if (insidePad(x, z, 60) || inPort(x, z)) h = Math.min(h, 1)
       pos.setY(i, h)
     }
     g.computeVertexNormals()
@@ -76,13 +83,15 @@ function Terrain({ zone }: { zone: Zone }) {
 function Buildings({ zone }: { zone: Zone }) {
   const geometry = useMemo(() => {
     const parts: THREE.BufferGeometry[] = []
+    const port = portRing(zone)
     for (const b of zone.vectors.buildings) {
       const [x0, z0] = b.ring[0]
       if (insidePad(x0, z0, 20)) continue
       const shape = new THREE.Shape(b.ring.map(([x, z]) => new THREE.Vector2(x, -z)))
       const g = new THREE.ExtrudeGeometry(shape, { depth: b.h, bevelEnabled: false })
       g.rotateX(-Math.PI / 2)
-      g.translate(0, Math.max(0, heightAt(zone, x0, z0)), 0)
+      // En el puerto, los edificios se apoyan en la explanada de los muelles.
+      g.translate(0, port && inRing(port, x0, z0) ? LAND_Y : Math.max(0, heightAt(zone, x0, z0)), 0)
       const flat = g.index ? g.toNonIndexed() : g
       // Un color de fachada por edificio, sorteado según su posición.
       const color = FACADES[Math.abs(Math.floor(x0 * 7.13 + z0 * 3.71)) % FACADES.length]
@@ -156,12 +165,14 @@ export default function World({ zone }: { zone: Zone }) {
   return (
     <group>
       <Terrain zone={zone} />
+      <PortLand zone={zone} />
+      <Breakwaters zone={zone} />
       <Buildings zone={zone} />
+      <PortLabels zone={zone} />
       <Label at={[-4119, -1440]} y={140}>Cerro de Montevideo · 134 m</Label>
       <Label at={[589, 559]} y={40}>Ciudad Vieja</Label>
       <Label at={[1261, 576]} y={110}>Palacio Salvo</Label>
       <Label at={[-1585, -1842]}>Bahía de Montevideo</Label>
-      <Label at={[-560, 1250]}>Escollera Sarandí</Label>
       <Label at={channel}>Canal de acceso</Label>
       <Label at={anchorage}>Fondeadero</Label>
       <Label at={[-500, 6200]}>Río de la Plata</Label>

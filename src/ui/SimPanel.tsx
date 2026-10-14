@@ -199,7 +199,7 @@ function Simulator() {
           <Slider
             id="p-berths"
             label="Muelles habilitados"
-            help="Sitios de atraque. La terminal real tiene un frente de unos 630 m, que da para dos buques grandes; el tercero es una ampliación hipotética."
+            help="Puestos de atraque de TCP. El Muelle de Escala (638 m) tiene dos; el tercero es la ampliación de la cara oeste, un muelle de 730 m que hoy está en construcción."
             value={params.berths}
             min={1}
             max={3}
