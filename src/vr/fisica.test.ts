@@ -104,6 +104,21 @@ describe('mundo y jugador', () => {
     expect(Math.abs(j.pos.x)).toBeLessThan(20.5)
   })
 
+  it('no queda en un bucle de caídas al volver desde el borde', () => {
+    const j = new Jugador(mundo)
+    j.ubicar(new THREE.Vector3(10, 0, -15))
+    caminar(j, new THREE.Vector3(), 0.5)
+    // Camina hasta el borde (x = 20) y sigue: cae, vuelve y queda quieto.
+    caminar(j, new THREE.Vector3(2, 0, 0), 8)
+    caminar(j, new THREE.Vector3(), 4)
+    expect(j.pos.y).toBeGreaterThan(-0.5)
+    expect(j.pos.x).toBeLessThanOrEqual(20)
+    // Quieto, no se mueve ni se vuelve a caer.
+    const quieto = j.pos.clone()
+    caminar(j, new THREE.Vector3(), 4)
+    expect(j.pos.distanceTo(quieto)).toBeLessThan(0.05)
+  })
+
   it('valida destinos de teletransporte', () => {
     expect(mundo.cabe(new THREE.Vector3(5, 0, 0), 0.25, 1.6)).toBe(true)
     expect(mundo.cabe(new THREE.Vector3(0, 0, 8), 0.25, 1.6)).toBe(false)

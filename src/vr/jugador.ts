@@ -25,8 +25,12 @@ export class Jugador {
   escalon: number
   gravedad: number
   caidaMaxima: number
-  private ultimoFirme = new THREE.Vector3()
+  /** Posiciones firmes recientes (piso justo debajo del centro), una cada ~0,25 s. */
+  private firmes: THREE.Vector3[] = []
   private tiempoFirme = 0
+  private relojFirme = 0
+  /** En el último subpaso había piso justo debajo del centro del cuerpo (no solo el borde de la cápsula). */
+  private sueloCentro = false
   private seg = new THREE.Line3()
   private tmp = new THREE.Vector3()
   private tmp2 = new THREE.Vector3()
@@ -46,7 +50,8 @@ export class Jugador {
     this.vel.set(0, 0, 0)
     const suelo = this.sueloBajo(this.tmp.set(p.x, p.y + 1.5, p.z), 40)
     if (suelo !== null) this.pos.y = suelo
-    this.ultimoFirme.copy(this.pos)
+    this.firmes = [this.pos.clone()]
+    this.tiempoFirme = 0
     this.enSuelo = true
   }
 
@@ -73,14 +78,24 @@ export class Jugador {
     const h = dt / n
     for (let i = 0; i < n; i++) this.subpaso(h, deseo)
 
-    // Vacío o agua: volver al último lugar firme.
-    if (this.pos.y < this.ultimoFirme.y - this.caidaMaxima) {
-      this.pos.copy(this.ultimoFirme)
+    // Vacío o agua: volver a tierra firme. Se usa la posición de hace un par de segundos (no la del borde,
+    // desde donde se volvería a caer).
+    const ultimo = this.firmes[this.firmes.length - 1]
+    if (ultimo && this.pos.y < ultimo.y - this.caidaMaxima) {
+      const destino = this.firmes[0]
+      this.pos.copy(destino)
       this.vel.set(0, 0, 0)
+      this.firmes = [destino]
+      this.tiempoFirme = 0
     }
-    if (this.enSuelo) {
+    if (this.enSuelo && this.sueloCentro) {
       this.tiempoFirme += dt
-      if (this.tiempoFirme > 0.4) this.ultimoFirme.copy(this.pos)
+      this.relojFirme += dt
+      if (this.tiempoFirme > 0.3 && this.relojFirme >= 0.25) {
+        this.relojFirme = 0
+        this.firmes.push(this.pos.clone())
+        if (this.firmes.length > 8) this.firmes.shift()
+      }
     } else this.tiempoFirme = 0
     return antes.subVectors(this.pos, antes)
   }
@@ -115,6 +130,7 @@ export class Jugador {
     const empujeArriba = empuje.y > Math.abs(this.vel.y * h) * 0.25 && empuje.y > 1e-5
     const suelo = this.sueloBajo(this.tmp.set(this.pos.x, this.pos.y + 0.3, this.pos.z), 0.42)
     this.enSuelo = empujeArriba || (suelo !== null && this.vel.y <= 0)
+    this.sueloCentro = suelo !== null
     if (this.enSuelo) {
       if (suelo !== null && suelo > this.pos.y - 0.12) this.pos.y = Math.max(this.pos.y, suelo)
       this.vel.y = 0
