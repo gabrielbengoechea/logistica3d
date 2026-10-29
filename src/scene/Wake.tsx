@@ -5,6 +5,7 @@ import type { Track } from '../sim/tracks'
 import { useStore } from '../store'
 import { SHARED } from './environment'
 import { shipPose } from './pose'
+import { lejosEnVR } from '../vr/estado'
 
 /** Puntos a lo largo de la estela (más puntos, curvas más suaves). */
 const N = 56
@@ -196,7 +197,7 @@ export default function Wake({ track }: { track: Track }) {
       phase === 'approaching' || phase === 'leaving' ? 1 : phase === 'berthing' ? (u < 0.7 ? 0.85 : 0.1) : phase === 'unberthing' ? (u > 0.5 ? 0.4 : 0.06) : 0
     opacity.current += (target - opacity.current) * Math.min(1, delta * 2.5)
     material.uniforms.uOpacity.value = opacity.current
-    m.visible = phase !== 'hidden' && opacity.current > 0.01
+    m.visible = phase !== 'hidden' && opacity.current > 0.01 && !lejosEnVR(pose.x, pose.z, 3200)
     if (!m.visible) return
 
     // Camino del centro hacia atrás; la estela empieza en la proa, L/2 por delante del centro.

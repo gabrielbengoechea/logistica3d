@@ -30,7 +30,11 @@ export const xrStore = createXRStore({
   hand: false,
   foveation: 1,
   frameRate: (tasas) => (Array.from(tasas).includes(72) ? 72 : false),
-  controller: { teleportPointer: false },
+  // El control izquierdo abre el menú con su gatillo: sin rayo ni agarre propios (menos trabajo por cuadro).
+  controller: {
+    left: { rayPointer: false, grabPointer: false, teleportPointer: false },
+    default: { teleportPointer: false, grabPointer: false },
+  },
 })
 
 /** Estado de los modos inmersivos, visible desde la interfaz (fuera del Canvas). */
@@ -90,6 +94,7 @@ export function Recorrido({ config, cerca = 0.08, lejos = 9000, alEntrar, alSali
   const rec = useRef<RecorridoVR | null>(null)
   const caminata = useRef<{ c: CaminataEscritorio; j: Jugador } | null>(null)
   const relojFicha = useRef(0)
+  const claveFicha = useRef('')
   const entrar = useRef(alEntrar)
   const salir = useRef(alSalir)
   entrar.current = alEntrar
@@ -113,7 +118,11 @@ export function Recorrido({ config, cerca = 0.08, lejos = 9000, alEntrar, alSali
     rec.current = r
     if (depurar) Object.assign(window, { __vr: { recorrido: r, jugador: r.jugador, mundo: r.mundo, gl, escena: scene } })
     // Un cuadro de margen: la escena termina de montarse con la calidad del visor antes de armar las colisiones.
-    const t = setTimeout(() => r.iniciar(), 50)
+    const t = setTimeout(() => {
+      r.iniciar()
+      // Compila de una vez los materiales de la escena (y de los paneles) para que no haya tirones al mirar algo nuevo.
+      void gl.compileAsync?.(scene, cam).catch(() => undefined)
+    }, 50)
     return () => {
       clearTimeout(t)
       r.terminar()
@@ -171,9 +180,15 @@ export function Recorrido({ config, cerca = 0.08, lejos = 9000, alEntrar, alSali
       relojFicha.current -= dt
       if (relojFicha.current <= 0 && !r.enTutorial) {
         relojFicha.current = 0.25
-        const f = fichaDesdeDOM(document.querySelector('[data-vr-ficha]'))
-        if (f) r.ficha.mostrar(gl.xr.getCamera(), f.titulo, f.lineas, f.etiqueta)
-        else r.ficha.ocultar()
+        // Solo se lee la ficha (texto del DOM, caro) cuando cambia lo que está seleccionado.
+        const el = document.querySelector<HTMLElement>('[data-vr-ficha]')
+        const clave = el ? (el.dataset.vrFicha || el.textContent || '') : ''
+        if (clave !== claveFicha.current) {
+          claveFicha.current = clave
+          const f = fichaDesdeDOM(el)
+          if (f) r.ficha.mostrar(gl.xr.getCamera(), f.titulo, f.lineas, f.etiqueta)
+          else r.ficha.ocultar()
+        }
       }
       return
     }

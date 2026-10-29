@@ -29,7 +29,7 @@ function escenario() {
   return raiz
 }
 
-async function armar() {
+async function armar(menu?: import('./escenas').ConfigMenu) {
   const { RecorridoVR } = await import('./recorrido')
   const escena = new THREE.Scene()
   const raiz = escenario()
@@ -55,6 +55,7 @@ async function armar() {
     inicio: { pos: new THREE.Vector3(0, 0, 4), yaw: 0 },
     limites: new THREE.Box3(new THREE.Vector3(-30, -5, -30), new THREE.Vector3(30, 10, 30)),
     colisionables: () => [raiz],
+    menu,
   })
   const cuadros = (n: number, antes?: () => void) => {
     for (let i = 0; i < n; i++) {
@@ -70,7 +71,14 @@ async function armar() {
     p.buttons[b].pressed = false
     cuadros(1)
   }
-  return { rec, rig, cabeza, izq, der, cuadros, tocar, escena }
+  /** Apunta el control derecho hacia un punto del mundo. */
+  const apuntar = (punto: THREE.Vector3) => {
+    const desde = new THREE.Vector3(0.2, 1.2, -0.2).applyMatrix4(rig.matrixWorld)
+    const m = new THREE.Matrix4().lookAt(desde, punto, new THREE.Vector3(0, 1, 0))
+    const local = new THREE.Matrix4().copy(rig.matrixWorld).invert().multiply(m.setPosition(desde))
+    poseDer.copy(local)
+  }
+  return { rec, rig, cabeza, izq, der, cuadros, tocar, escena, apuntar }
 }
 
 const yaw = (o: THREE.Object3D) => o.rotation.y
@@ -170,5 +178,80 @@ describe('recorrido en el visor (sesión simulada)', () => {
     const cabezaMundo = cabeza.getWorldPosition(new THREE.Vector3())
     expect(cabezaMundo.z).toBeGreaterThan(-5.85)
     expect(rig.position.z).toBeGreaterThan(cabeza.position.z * -1 - 10) // el rig retrocedió para compensar
+  })
+
+  it('el gatillo izquierdo abre el menú, maneja el tiempo y lanza una escena guiada', async () => {
+    const registro: string[] = []
+    let vel = 1
+    let pausa = false
+    const lugar = { titulo: 'Mirador', pos: new THREE.Vector3(10, 12, 10), yaw: 0, alto: true }
+    const menu: import('./escenas').ConfigMenu = {
+      tiempo: {
+        reloj: () => 'Día 1 · 10:00',
+        pausado: () => pausa,
+        alternarPausa: () => (pausa = !pausa),
+        velocidades: [{ etiqueta: 'Lento', valor: 0.1 }, { etiqueta: 'Rápido', valor: 1 }],
+        velocidad: () => vel,
+        fijarVelocidad: (v) => (vel = v),
+        saltos: [{ etiqueta: '+1 h', horas: 1 }],
+        saltar: (h) => registro.push(`salto ${h}`),
+      },
+      escenas: [
+        {
+          id: 'demo',
+          titulo: 'Demo',
+          resumen: 'Escena de prueba',
+          preparar: () => (registro.push('preparar'), lugar),
+          pasos: [{ texto: 'Uno' }, { texto: 'Dos', al: () => registro.push('paso 2') }],
+        },
+      ],
+    }
+    const { rec, izq, der, cuadros, tocar, apuntar } = await armar(menu)
+    rec.opciones.narracion = false
+    rec.iniciar()
+    cuadros(1)
+    for (let i = 0; i < 3; i++) tocar(der, 0)
+    tocar(izq, 0)
+    expect(rec.menu.abierto).toBe(true)
+    // El menú no sigue al control izquierdo (sin pose en la simulación): se lo deja frente al jugador.
+    rec.menu.malla.position.set(0, 1.5, 3.4)
+    rec.menu.malla.lookAt(0, 1.5, 4)
+    cuadros(1)
+    const apretar = (panel: { centroDe(id: string): THREE.Vector3 | null }, id: string) => {
+      const c = panel.centroDe(id)
+      expect(c, id).not.toBeNull()
+      apuntar(c!)
+      cuadros(1)
+      der.buttons[0].pressed = true
+      cuadros(1)
+      const consumido = rec.gatilloConsumido
+      der.buttons[0].pressed = false
+      cuadros(1)
+      return consumido
+    }
+    expect(apretar(rec.menu, 'vel:0')).toBe(true)
+    expect(vel).toBe(0.1)
+    apretar(rec.menu, 'tiempo:pausa')
+    expect(pausa).toBe(true)
+    apretar(rec.menu, 'salto:0')
+    expect(registro).toContain('salto 1')
+    apretar(rec.menu, 'pestana:escenas')
+    expect(rec.menu.pestana).toBe('escenas')
+    apretar(rec.menu, 'escena:demo')
+    expect(registro).toContain('preparar')
+    expect(rec.menu.abierto).toBe(false)
+    expect(rec.guia.activa).toBe(true)
+    // Llevado al mirador: parado sobre la plataforma de observación, a 12 m.
+    cuadros(10)
+    expect(rec.jugador.pos.y).toBeCloseTo(12, 0)
+    expect(rec.jugador.pos.distanceTo(new THREE.Vector3(10, 12, 10))).toBeLessThan(0.5)
+    apretar(rec.guia, 'guia:siguiente')
+    expect(rec.guia.paso).toBe(1)
+    expect(registro).toContain('paso 2')
+    apretar(rec.guia, 'guia:siguiente') // Terminar
+    expect(rec.guia.activa).toBe(false)
+    // Sigue parado en la plataforma (no se cae).
+    cuadros(72)
+    expect(rec.jugador.pos.y).toBeCloseTo(12, 0)
   })
 })

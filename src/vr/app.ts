@@ -2,6 +2,7 @@
 import * as THREE from 'three'
 import { LAND_Y, PAD, TERMINAL, toWorld } from '../scene/layout'
 import type { ConfigRecorrido } from './recorrido'
+import { menuTerminal } from './escenas-terminal'
 import { tarjetaResumen, tarjetasControles, type Tarjeta } from './tarjetas'
 
 export const TITULO = 'Logística 3D · Terminal de Montevideo'
@@ -15,6 +16,7 @@ const portada: Tarjeta = {
     'Caminá por el muelle, entre las grúas pórtico y los bloques del patio',
     'Apuntá a un buque, una grúa o el patio y apretá el gatillo para ver su ficha con los datos de la simulación',
     'Usá el teletransporte para cruzar distancias largas: la terminal mide casi 800 m',
+    'Con el gatillo izquierdo abrís el menú: manejás el reloj y lanzás escenas guiadas como el atraque o la descarga',
   ],
 }
 
@@ -50,7 +52,12 @@ function limites(): THREE.Box3 {
   return caja
 }
 
-export function configRecorrido(...raices: React.RefObject<THREE.Object3D | null>[]): ConfigRecorrido {
+/** Recorrido de la terminal: `terminal` es lo que se choca caminando y `ciudad` el relieve y los edificios. */
+export function configRecorrido(
+  terminal: React.RefObject<THREE.Object3D | null>,
+  ciudad: React.RefObject<THREE.Object3D | null>,
+): ConfigRecorrido {
+  const raices = [terminal, ciudad]
   const [x, z] = toWorld(40, 120)
   return {
     tarjetas: TARJETAS,
@@ -60,5 +67,6 @@ export function configRecorrido(...raices: React.RefObject<THREE.Object3D | null
     colisionables: () => raices.map((r) => r.current).filter((o): o is THREE.Object3D => o !== null),
     excluir: (o) => 'isSky' in o || (o as THREE.Points).isPoints === true || (o as THREE.Line).isLine === true,
     velocidad: 3,
+    menu: menuTerminal(() => ciudad.current),
   }
 }

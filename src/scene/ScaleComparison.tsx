@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Edges, Html } from '@react-three/drei'
 import * as THREE from 'three'
+import { useEnXR } from '../vr/r3f'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { mulberry32 } from '../sim/rng'
 import { useStore } from '../store'
@@ -53,6 +54,7 @@ export default function ScaleComparison() {
 }
 
 function Label({ position, children, tone }: { position: [number, number, number]; children: string; tone?: 'accent' }) {
+  if (useEnXR()) return null
   return (
     <Html position={position} center zIndexRange={[10, 0]}>
       <Tag tone={tone}>{children}</Tag>

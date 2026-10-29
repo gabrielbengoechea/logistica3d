@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useEnXR } from '../vr/r3f'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { ENTRY, LAND_Y, MOUTH, PAD, anchorageSlot, toTerminal } from './layout'
 import { SHARED } from './environment'
@@ -32,6 +33,9 @@ function Terrain({ zone }: { zone: Zone }) {
     })
   }, [zone.imageUrl])
 
+  // En el visor el relieve va con un vértice de cada tres (≈9 veces menos triángulos): de cerca se camina sobre
+  // la terminal, que es otro modelo, y la ciudad se ve desde lejos.
+  const enXR = useEnXR()
   const geometry = useMemo(() => {
     const { extent, terrain } = zone.meta
     const port = portRing(zone)
@@ -39,21 +43,34 @@ function Terrain({ zone }: { zone: Zone }) {
       ? [Math.min(...port.map((p) => p[0])), Math.max(...port.map((p) => p[0])), Math.min(...port.map((p) => p[1])), Math.max(...port.map((p) => p[1]))]
       : [0, 0, 0, 0]
     const inPort = (x: number, z: number) => !!port && x > pxmin && x < pxmax && z > pzmin && z < pzmax && inRing(port, x, z)
-    const g = new THREE.PlaneGeometry(extent.xmax - extent.xmin, extent.zmax - extent.zmin, terrain.cols - 1, terrain.rows - 1)
+    const paso = enXR ? 3 : 1
+    const sc = Math.ceil((terrain.cols - 1) / paso)
+    const sr = Math.ceil((terrain.rows - 1) / paso)
+    const W = extent.xmax - extent.xmin
+    const H = extent.zmax - extent.zmin
+    const g = new THREE.PlaneGeometry(W, H, sc, sr)
     g.rotateX(-Math.PI / 2)
-    g.translate((extent.xmin + extent.xmax) / 2, 0, (extent.zmin + extent.zmax) / 2)
     const pos = g.attributes.position as THREE.BufferAttribute
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i)
-      const z = pos.getZ(i)
-      let h = zone.heights[i]
-      // Bajo el recinto portuario el relieve queda por debajo de la explanada de los muelles.
-      if (insidePad(x, z, 60) || inPort(x, z)) h = Math.min(h, 1)
-      pos.setY(i, h)
-    }
+    const uv = g.attributes.uv as THREE.BufferAttribute
+    // Cada vértice toma la muestra real de la grilla del relieve (fila r, columna c; las últimas quedan en el borde).
+    for (let r = 0; r <= sr; r++)
+      for (let c = 0; c <= sc; c++) {
+        const i = r * (sc + 1) + c
+        const fc = Math.min(c * paso, terrain.cols - 1)
+        const fr = Math.min(r * paso, terrain.rows - 1)
+        const x = extent.xmin + (fc / (terrain.cols - 1)) * W
+        const z = extent.zmin + (fr / (terrain.rows - 1)) * H
+        let h = zone.heights[fr * terrain.cols + fc]
+        // Bajo el recinto portuario el relieve queda por debajo de la explanada de los muelles.
+        if (insidePad(x, z, 60) || inPort(x, z)) h = Math.min(h, 1)
+        pos.setXYZ(i, x, h, z)
+        uv.setXY(i, (x - extent.xmin) / W, 1 - (z - extent.zmin) / H)
+      }
     g.computeVertexNormals()
+    g.computeBoundingBox()
+    g.computeBoundingSphere()
     return g
-  }, [zone])
+  }, [zone, enXR])
 
   const material = useMemo(() => {
     if (!texture) return null
@@ -183,6 +200,7 @@ export function buildingMaterial() {
 }
 
 function Label({ at, children, y = 20 }: { at: [number, number]; children: string; y?: number }) {
+  if (useEnXR()) return null
   return (
     <Html position={[at[0], y, at[1]]} center zIndexRange={[10, 0]}>
       <Tag tone="muted">{children}</Tag>

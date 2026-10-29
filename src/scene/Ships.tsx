@@ -13,6 +13,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { shipPose } from './pose'
 import Tag from './Tag'
 import Wake from './Wake'
+import { lejosEnVR } from '../vr/estado'
+import { useEnXR } from '../vr/r3f'
 
 const HULL_H = 13
 const FUNNEL_COLORS = ['#c94a3d', '#1f6fb5', '#e8a33b', '#2e8b57', '#f8fafc']
@@ -67,12 +69,14 @@ function Ship({ track }: { track: Track }) {
   const select = useStore((s) => s.select)
   const selected = useStore((s) => s.selection?.kind === 'ship' && s.selection.id === id)
   const mooring = useMemo(() => mooringLines(L, B), [L, B])
+  const enXR = useEnXR()
 
   useFrame(() => {
     const { t, params } = useStore.getState()
     const pose = shipPose(track, t, params)
     const g = group.current!
-    const visible = pose.phase !== 'hidden'
+    // En el visor los buques muy lejanos (fondeadero, mar abierto) no se dibujan: son puntos de pocos píxeles.
+    const visible = pose.phase !== 'hidden' && !lejosEnVR(pose.x, pose.z, 3200)
     g.visible = visible
     if (tag.current) tag.current.style.display = visible ? 'block' : 'none'
     if (!visible) return
@@ -95,7 +99,7 @@ function Ship({ track }: { track: Track }) {
         select({ kind: 'ship', id })
       }}
     >
-      <ShipBody length={L} beam={B} seed={track.index + 1} selected={selected} label={selected ? `${id} · ${name}` : id} cargoRef={cargo} tagRef={tag} />
+      <ShipBody length={L} beam={B} seed={track.index + 1} selected={selected} label={selected ? `${id} · ${name}` : id} cargoRef={cargo} tagRef={tag} tag={!enXR} />
       <mesh ref={lines} geometry={mooring} visible={false}>
         <meshStandardMaterial color="#3a3a36" roughness={0.9} />
       </mesh>

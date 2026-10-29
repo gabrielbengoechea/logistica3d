@@ -37,6 +37,7 @@ export class LectorMandos {
 }
 
 const ZONA_MUERTA = 0.18
+const EJE_Y = new THREE.Vector3(0, 1, 0)
 
 function textoViñeta(): THREE.CanvasTexture {
   const c = document.createElement('canvas')
@@ -69,11 +70,22 @@ export class Locomocion {
   limites?: THREE.Box3
   /** Se pone en false para congelar al jugador (por ejemplo durante el tutorial). */
   habilitada = true
+  /** Viñeta de confort al desplazarse con el stick (se puede apagar desde el menú). */
+  viñetaActiva = true
   private giroArmado = true
   private apuntando = false
   private destino = new THREE.Vector3()
   private destinoValido = false
   private hayImpacto = false
+  // Vectores reutilizados: nada se crea en cada cuadro (el recolector de basura del navegador del Quest produce tirones).
+  private deseo = new THREE.Vector3()
+  private tmpA = new THREE.Vector3()
+  private tmpB = new THREE.Vector3()
+  private tmpC = new THREE.Vector3()
+  private arcoV = new THREE.Vector3()
+  private arcoP = new THREE.Vector3()
+  private arcoQ = new THREE.Vector3()
+  private arcoD = new THREE.Vector3()
   readonly arco: THREE.Line
   readonly aro: THREE.Mesh
   private puntosArco = new Float32Array(3 * 48)
@@ -140,15 +152,14 @@ export class Locomocion {
     this.jugador.pos.z = cabezaMundo.z
 
     // 2. Stick izquierdo: caminar hacia donde se mira.
-    const deseo = new THREE.Vector3()
+    const deseo = this.deseo.set(0, 0, 0)
     if (this.habilitada && izq) {
       const [x, y] = izq.ejes
       if (Math.hypot(x, y) > ZONA_MUERTA) {
         const yaw = this.yawCabeza(rig, cabeza)
-        const adelante = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw))
-        const derecha = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw))
         const k = this.velocidad * (izq.apretado[BOTON.stick] ? 1.9 : 1)
-        deseo.addScaledVector(adelante, -y * k).addScaledVector(derecha, x * k)
+        // adelante = (-sen, 0, -cos) · derecha = (cos, 0, -sen)
+        deseo.set(-Math.sin(yaw) * -y * k + Math.cos(yaw) * x * k, 0, -Math.cos(yaw) * -y * k - Math.sin(yaw) * x * k)
       }
     }
     this.jugador.paso(dt, deseo)
@@ -177,7 +188,7 @@ export class Locomocion {
 
     // 5. Viñeta según la velocidad del desplazamiento artificial.
     if (this.viñeta) {
-      const objetivo = deseo.lengthSq() > 0.01 ? 0.75 : 0
+      const objetivo = this.viñetaActiva && deseo.lengthSq() > 0.01 ? 0.75 : 0
       this.intensidad += (objetivo - this.intensidad) * Math.min(1, dt * 6)
       ;(this.viñeta.material as THREE.MeshBasicMaterial).opacity = this.intensidad
       this.viñeta.visible = this.intensidad > 0.02
@@ -187,13 +198,14 @@ export class Locomocion {
   /** Lleva al jugador a un punto, mirando hacia `yaw` (radianes, 0 = -Z). */
   irA(rig: THREE.Object3D, cabeza: THREE.Object3D, pies: THREE.Vector3, yaw: number) {
     this.jugador.ubicar(pies)
-    const yawLocal = Math.atan2(-this.dirLocal(cabeza).x, -this.dirLocal(cabeza).z)
+    const d = this.dirLocal(cabeza)
+    const yawLocal = Math.atan2(-d.x, -d.z)
     rig.rotation.set(0, yaw - yawLocal, 0)
     this.ajustarRig(rig, cabeza)
   }
 
   private girar(rig: THREE.Object3D, cabeza: THREE.Object3D, angulo: number) {
-    const antes = this.cabezaMundo(rig, cabeza)
+    const antes = this.tmpA.copy(this.cabezaMundo(rig, cabeza))
     rig.rotation.y += angulo
     rig.updateMatrixWorld()
     const despues = this.cabezaMundo(rig, cabeza)
@@ -203,18 +215,18 @@ export class Locomocion {
   }
 
   private ajustarRig(rig: THREE.Object3D, cabeza: THREE.Object3D) {
-    const local = new THREE.Vector3(cabeza.position.x, 0, cabeza.position.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), rig.rotation.y)
+    const local = this.tmpB.set(cabeza.position.x, 0, cabeza.position.z).applyAxisAngle(EJE_Y, rig.rotation.y)
     rig.position.set(this.jugador.pos.x - local.x, this.jugador.pos.y, this.jugador.pos.z - local.z)
     rig.updateMatrixWorld()
   }
 
+  /** Posición de la cabeza en el mundo (en el plano). Devuelve un vector reutilizado: copiarlo si se guarda. */
   private cabezaMundo(rig: THREE.Object3D, cabeza: THREE.Object3D) {
-    const local = new THREE.Vector3(cabeza.position.x, 0, cabeza.position.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), rig.rotation.y)
-    return local.add(rig.position)
+    return this.tmpB.set(cabeza.position.x, 0, cabeza.position.z).applyAxisAngle(EJE_Y, rig.rotation.y).add(rig.position)
   }
 
   private dirLocal(cabeza: THREE.Object3D) {
-    return new THREE.Vector3(0, 0, -1).applyQuaternion(cabeza.quaternion)
+    return this.tmpC.set(0, 0, -1).applyQuaternion(cabeza.quaternion)
   }
 
   private yawCabeza(rig: THREE.Object3D, cabeza: THREE.Object3D) {
@@ -225,16 +237,19 @@ export class Locomocion {
   /** Arco balístico desde el control; el destino vale si es piso, está en la zona y entra el jugador. */
   private calcularArco(rayo: THREE.Ray) {
     const g = 9.8
-    const v = rayo.direction.clone().normalize().multiplyScalar(this.alcance)
-    const p = rayo.origin.clone()
-    const q = new THREE.Vector3()
-    const dir = new THREE.Vector3()
+    const v = this.arcoV.copy(rayo.direction).normalize().multiplyScalar(this.alcance)
+    const p = this.arcoP.copy(rayo.origin)
+    const q = this.arcoQ
+    const dir = this.arcoD
+    const pts = this.puntosArco
     const dt = 0.05
     let k = 0
     this.destinoValido = false
     let impacto: THREE.Intersection | null = null
     for (; k < 47; k++) {
-      this.puntosArco.set([p.x, p.y, p.z], k * 3)
+      pts[k * 3] = p.x
+      pts[k * 3 + 1] = p.y
+      pts[k * 3 + 2] = p.z
       q.set(p.x + v.x * dt, p.y + v.y * dt - 0.5 * g * dt * dt, p.z + v.z * dt)
       v.y -= g * dt
       dir.subVectors(q, p)
@@ -248,8 +263,11 @@ export class Locomocion {
       p.copy(q)
       if (p.y < this.jugador.pos.y - 30) break
     }
-    this.puntosArco.set([p.x, p.y, p.z], k * 3)
-    for (let i = k + 1; i < 48; i++) this.puntosArco.set([p.x, p.y, p.z], i * 3)
+    for (let i = k; i < 48; i++) {
+      pts[i * 3] = p.x
+      pts[i * 3 + 1] = p.y
+      pts[i * 3 + 2] = p.z
+    }
     this.arco.geometry.attributes.position.needsUpdate = true
     this.arco.geometry.setDrawRange(0, k + 1)
     if (impacto) {

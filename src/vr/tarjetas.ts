@@ -1,7 +1,7 @@
 // Tarjetas ilustradas del tutorial (estilo Mission:ISS): cada una se dibuja en un canvas 2D y se usa igual en el
 // visor (como textura de un panel) y en la pantalla (como imagen). Sin archivos externos: todo es dibujo vectorial.
 
-export type Parte = 'gatillo' | 'grip' | 'stickIzq' | 'stickDer' | 'botonA' | 'botonB' | 'botonX' | 'botonY' | 'cabeza'
+export type Parte = 'gatillo' | 'gatilloIzq' | 'grip' | 'stickIzq' | 'stickDer' | 'botonA' | 'botonB' | 'botonX' | 'botonY' | 'cabeza'
 
 export interface Tarjeta {
   /** Texto pequeño sobre el título (por ejemplo «Paso 2 de 6»). Si falta, se numera sola. */
@@ -12,7 +12,7 @@ export interface Tarjeta {
   /** Partes del control que se resaltan. */
   resaltar?: Parte[]
   /** Flechas o indicaciones sobre los sticks. */
-  gesto?: 'mover' | 'girar' | 'teletransporte' | 'apuntar' | 'mirar'
+  gesto?: 'mover' | 'girar' | 'teletransporte' | 'apuntar' | 'mirar' | 'menu'
   /** Tarjeta de portada: título grande, sin controles dibujados. */
   portada?: boolean
   /** Lista de ítems (portada o resumen). */
@@ -109,6 +109,7 @@ function control(g: CanvasRenderingContext2D, cx: number, cy: number, lado: 'izq
     grip: { x: cx - s * 86, y: cy + 92 },
   }
   const parteStick: Parte = lado === 'izq' ? 'stickIzq' : 'stickDer'
+  const parteGatillo: Parte = lado === 'izq' ? 'gatilloIzq' : 'gatillo'
   const parte1: Parte = lado === 'izq' ? 'botonX' : 'botonA'
   const parte2: Parte = lado === 'izq' ? 'botonY' : 'botonB'
 
@@ -116,7 +117,7 @@ function control(g: CanvasRenderingContext2D, cx: number, cy: number, lado: 'izq
   if (resaltar.has(parteStick)) halo(g, pos.stick.x, pos.stick.y, 30)
   if (resaltar.has(parte1)) halo(g, pos.boton1.x, pos.boton1.y, 20)
   if (resaltar.has(parte2)) halo(g, pos.boton2.x, pos.boton2.y, 20)
-  if (resaltar.has('gatillo')) halo(g, pos.gatillo.x, pos.gatillo.y, 34)
+  if (resaltar.has(parteGatillo)) halo(g, pos.gatillo.x, pos.gatillo.y, 34)
   if (resaltar.has('grip')) halo(g, pos.grip.x, pos.grip.y, 38)
 
   // Anillo de seguimiento
@@ -130,7 +131,7 @@ function control(g: CanvasRenderingContext2D, cx: number, cy: number, lado: 'izq
   g.stroke()
 
   // Gatillo (asoma por delante)
-  g.fillStyle = resaltar.has('gatillo') ? C.acento : C.boton
+  g.fillStyle = resaltar.has(parteGatillo) ? C.acento : C.boton
   redondeado(g, pos.gatillo.x - 26, pos.gatillo.y - 18, 52, 40, 16)
   g.fill()
 
@@ -267,6 +268,28 @@ function gestos(g: CanvasRenderingContext2D, t: Tarjeta, izq: ReturnType<typeof 
       etiqueta(x + 42, y - 190, 'apuntá y apretá')
       break
     }
+    case 'menu': {
+      // Panel flotando sobre el control izquierdo, y el rayo derecho apuntándolo.
+      const { x, y } = izq.gatillo
+      g.fillStyle = 'rgba(9,20,34,0.95)'
+      g.strokeStyle = C.acento
+      g.lineWidth = 3
+      redondeado(g, x - 90, y - 210, 180, 130, 14)
+      g.fill()
+      g.stroke()
+      g.fillStyle = C.acento
+      for (let i = 0; i < 4; i++) g.fillRect(x - 78 + i * 42, y - 198, 36, 16)
+      g.fillStyle = 'rgba(255,255,255,0.35)'
+      for (let i = 0; i < 3; i++) g.fillRect(x - 78, y - 168 + i * 26, 156, 16)
+      g.strokeStyle = C.acento2
+      g.lineWidth = 5
+      g.beginPath()
+      g.moveTo(der.gatillo.x, der.gatillo.y - 24)
+      g.lineTo(x + 40, y - 150)
+      g.stroke()
+      etiqueta(x, y - 232, 'menú')
+      break
+    }
     default:
   }
 }
@@ -398,6 +421,13 @@ export function tarjetasControles(interaccion: string): Tarjeta[] {
       gesto: 'apuntar',
     },
     {
+      titulo: 'Menú',
+      texto:
+        'Apretá el gatillo izquierdo (dedo índice): se abre un menú sobre tu mano izquierda.\n\nControlá el tiempo (pausa, velocidad, saltar horas), elegí una escena guiada o andá a un lugar. Apuntá con el control derecho y apretá su gatillo.',
+      resaltar: ['gatilloIzq'],
+      gesto: 'menu',
+    },
+    {
       titulo: 'Botones útiles',
       texto: 'Y: volver al punto de partida.\nB: ver este tutorial de nuevo.\nBotón Meta (derecho): salir de la experiencia.',
       resaltar: ['botonY', 'botonB'],
@@ -411,11 +441,12 @@ export function tarjetaResumen(interaccionCorta: string): Tarjeta {
     etiqueta: 'Resumen',
     titulo: '¡Listo para empezar!',
     texto: 'Apretá el gatillo para comenzar.',
-    resaltar: ['stickIzq', 'stickDer', 'gatillo', 'botonY', 'botonB'],
+    resaltar: ['stickIzq', 'stickDer', 'gatillo', 'gatilloIzq', 'botonY', 'botonB'],
     items: [
       'Stick izquierdo: caminar (click: correr)',
       'Stick derecho: girar · adelante: teletransporte',
-      `Gatillo: ${interaccionCorta}`,
+      `Gatillo derecho: ${interaccionCorta}`,
+      'Gatillo izquierdo: menú (tiempo, escenas, lugares)',
       'Y: punto de partida · B: tutorial',
     ],
   }
