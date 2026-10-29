@@ -18,6 +18,10 @@ const params = typeof location !== 'undefined' ? new URLSearchParams(location.se
 const emular = params.get('emular') === '1'
 /** ?debug=1 deja el jugador y el mundo de colisión en window.__vr (para pruebas). */
 const depurar = params.get('debug') === '1'
+// El emulador no se instala si el navegador ya trae WebXR (aunque no tenga visor): con ?emular=1 se oculta el nativo.
+if (emular && typeof navigator !== 'undefined' && navigator.xr) {
+  Object.defineProperty(navigator, 'xr', { value: undefined, configurable: true, writable: true })
+}
 
 export const xrStore = createXRStore({
   offerSession: false,

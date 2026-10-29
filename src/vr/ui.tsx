@@ -83,7 +83,7 @@ export function AvisoAPie() {
   const aPie = modoVR((s) => s.aPie)
   if (!aPie) return null
   return (
-    <div className="material pointer-events-auto rounded-[13px] px-4 py-2.5 text-[13px] text-[var(--ink)]">
+    <div className="material pointer-events-auto max-w-full rounded-[13px] px-4 py-2.5 text-center text-[13px] text-[var(--ink)]">
       <b>A pie:</b> W A S D o flechas para caminar · Shift para correr · arrastrá para mirar ·{' '}
       <button className="font-semibold text-[var(--accent)]" onClick={() => modoVR.setState({ aPie: false })}>
         Salir (Esc)

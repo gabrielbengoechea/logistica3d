@@ -93,7 +93,7 @@ export class MundoColision {
     const geometria = new THREE.BufferGeometry()
     geometria.setAttribute('position', new THREE.BufferAttribute(datos.slice(0, Math.max(n, 9)), 3))
     if (n === 0) geometria.setDrawRange(0, 0)
-    this.bvh = new MeshBVH(geometria, { maxLeafSize: 8 })
+    this.bvh = new MeshBVH(geometria, { targetLeafSize: 8 })
     this.msConstruccion = performance.now() - t0
     return this
   }
