@@ -84,10 +84,7 @@ export class RecorridoVR {
     this.ficha.ocultar()
     this.config.alCambiar?.('tutorial')
     this.cabeza.updateMatrixWorld()
-    void this.tutorial.mostrar(this.cabeza, desde).then(() => {
-      this.locomocion.habilitada = true
-      this.config.alCambiar?.('recorriendo')
-    })
+    void this.tutorial.mostrar(this.cabeza, desde)
   }
 
   /** Llamar en cada cuadro mientras haya sesión. Devuelve los mandos leídos (para que la app use el gatillo). */
@@ -103,12 +100,15 @@ export class RecorridoVR {
     if (this.tutorial.activo) {
       if (mandos.some((m) => m.flanco[BOTON.gatillo] || m.flanco[BOTON.a])) this.tutorial.siguiente()
       else if (mandos.some((m) => m.flanco[BOTON.grip])) this.tutorial.anterior()
+      if (!this.tutorial.activo) this.config.alCambiar?.('recorriendo')
     } else {
       const izq = mandos.find((m) => m.mano === 'left')
       const der = mandos.find((m) => m.mano === 'right')
       if (izq?.flanco[BOTON.b]) this.irAlInicio() // Y
       if (der?.flanco[BOTON.b]) this.verTutorial(0) // B
     }
+    // Mientras está el tutorial, el jugador queda quieto (se decide en cada cuadro, sin esperas).
+    this.locomocion.habilitada = !this.tutorial.activo
     this.locomocion.actualizar(dt, mandos, this.rig, this.cabeza, this.rayo('right'))
     return mandos
   }
