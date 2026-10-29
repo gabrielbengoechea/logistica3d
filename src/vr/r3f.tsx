@@ -39,8 +39,8 @@ export const modoVR = create<{ aPie: boolean; soportaVR: boolean; estado: 'fuera
 /** Se resuelve cuando se sabe si el navegador puede entrar en VR (inmediato si no hay WebXR). */
 export const listoVR: Promise<boolean> = (async () => {
   if (typeof navigator === 'undefined') return false
-  // Con el emulador, navigator.xr aparece recién cuando termina de cargar.
-  for (let i = 0; emular && !navigator.xr && i < 50; i++) await new Promise((r) => setTimeout(r, 100))
+  // Con el emulador, navigator.xr se reemplaza recién cuando termina de cargar.
+  for (let i = 0; emular && !(xrStore.getState() as { emulator?: unknown }).emulator && i < 80; i++) await new Promise((r) => setTimeout(r, 100))
   const ok = (await navigator.xr?.isSessionSupported('immersive-vr').catch(() => false)) ?? false
   modoVR.setState({ soportaVR: ok })
   return ok
