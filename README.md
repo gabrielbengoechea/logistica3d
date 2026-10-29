@@ -12,6 +12,25 @@ Todo es web: React, Three.js (React Three Fiber) y TypeScript. No hay servidor: 
 - **Operación simulada:** buques, llegadas, grúas, patio y camiones salen del simulador. Por ahora no se usan
   datos reales de operación; la puerta queda abierta (ver `docs/datos-reales.md`).
 
+
+## Recorrido en VR (Meta Quest 2 y 3)
+
+Este fork suma un recorrido a pie en realidad virtual. Publicado en **https://gabrielbengoechea.github.io/logistica3d/**.
+
+1. En el Quest, abrir la dirección en el navegador del visor y tocar **Entrar en VR** (o el ícono del visor arriba a la derecha).
+2. Antes de empezar aparece un **tutorial ilustrado** con los controles (como en Mission:ISS). Se avanza con el gatillo.
+3. Controles: **stick izquierdo** caminar (click: correr) · **stick derecho** girar 30° y, hacia adelante, arco de **teletransporte** · **gatillo** ficha de lo que se apunta · **Y** volver al punto de partida · **B** ver el tutorial de nuevo.
+4. Las mallas son colisionables: paredes, estanterías, contenedores y máquinas no se atraviesan (cápsula contra la geometría real con three-mesh-bvh). Si alguien cae al agua o a un vacío, vuelve a tierra firme.
+5. Se empieza en la explanada del muelle, detrás de las grúas. La terminal es grande: conviene usar el teletransporte.
+
+Sin visor: botón **A pie** para recorrer en primera persona con W A S D y el mouse, con las mismas colisiones.
+
+Rendimiento en el Quest 2: 72 Hz, renderizado foveado y, dentro del visor, sin posprocesado ni sombras dinámicas.
+
+Para probar sin visor: `?emular=1` simula un Quest en la computadora y `?debug=1` deja el jugador en `window.__vr`.
+
+El código del recorrido está en `src/vr/` (tutorial, mundo de colisión, jugador, locomoción) y tiene sus pruebas en `fisica.test.ts`.
+
 ## Correr
 
 ```bash
