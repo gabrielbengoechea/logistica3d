@@ -22,7 +22,7 @@ const depurar = params.get('debug') === '1'
 export const xrStore = createXRStore({
   offerSession: false,
   // ?emular=1 simula un Meta Quest en la computadora (para probar sin visor).
-  emulate: emular ? 'metaQuest2' : false,
+  emulate: emular ? { type: 'metaQuest2', inject: true } : false,
   hand: false,
   foveation: 1,
   frameRate: (tasas) => (Array.from(tasas).includes(72) ? 72 : false),
@@ -37,16 +37,14 @@ export const modoVR = create<{ aPie: boolean; soportaVR: boolean; estado: 'fuera
 }))
 
 /** Se resuelve cuando se sabe si el navegador puede entrar en VR (inmediato si no hay WebXR). */
-export const listoVR: Promise<boolean> =
-  typeof navigator !== 'undefined' && navigator.xr
-    ? navigator.xr
-        .isSessionSupported('immersive-vr')
-        .then((ok) => {
-          modoVR.setState({ soportaVR: ok })
-          return ok
-        })
-        .catch(() => false)
-    : Promise.resolve(false)
+export const listoVR: Promise<boolean> = (async () => {
+  if (typeof navigator === 'undefined') return false
+  // Con el emulador, navigator.xr aparece recién cuando termina de cargar.
+  for (let i = 0; emular && !navigator.xr && i < 50; i++) await new Promise((r) => setTimeout(r, 100))
+  const ok = (await navigator.xr?.isSessionSupported('immersive-vr').catch(() => false)) ?? false
+  modoVR.setState({ soportaVR: ok })
+  return ok
+})()
 
 export const useEnXR = () => useStore(xrStore, (s) => s.session != null)
 export const entrarVR = () => {
