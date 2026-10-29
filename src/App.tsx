@@ -1,6 +1,8 @@
 import { Canvas } from '@react-three/fiber'
 import * as THREE from 'three'
+import { XR } from '@react-three/xr'
 import Scene, { VIEWS } from './scene/Scene'
+import { xrStore } from './vr/r3f'
 import { useStore } from './store'
 import Hud from './ui/Hud'
 
@@ -19,7 +21,9 @@ export default function App() {
         dpr={[...DPR[quality]]}
         onPointerMissed={() => select(null)}
       >
-        <Scene />
+        <XR store={xrStore}>
+          <Scene />
+        </XR>
       </Canvas>
       <Hud />
     </div>

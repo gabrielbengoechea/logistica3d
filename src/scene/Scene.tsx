@@ -21,6 +21,8 @@ import { shipPose } from './pose'
 import { useZone } from './zone'
 import { TOURS } from '../didactic/tours'
 import { listenKeyboard, nav } from './navInput'
+import { configRecorrido } from '../vr/app'
+import { Recorrido, modoVR, useEnXR, xrStore } from '../vr/r3f'
 
 const fromTerminal = (x: number, y: number, z: number): [number, number, number] => {
   const [wx, wz] = toWorld(x, z)
@@ -116,8 +118,34 @@ function FreeNav({ controls }: { controls: React.RefObject<CameraControls | null
   return null
 }
 
+/** Calidad que había antes de entrar al visor, para dejarla igual al salir. */
+let calidadAntes: { quality: ReturnType<typeof useStore.getState>['quality']; locked: boolean } | null = null
+
+function alEntrarRecorrido() {
+  const s = useStore.getState()
+  s.setFollow(null)
+  if (s.tour) useStore.setState({ tour: null })
+  // En el visor: sin posprocesado ni sombras (el Quest 2 necesita 72 cuadros por segundo estables).
+  if (xrStore.getState().session) {
+    calidadAntes = { quality: s.quality, locked: s.qualityLocked }
+    s.setQuality('baja', true)
+  }
+}
+
+function alSalirRecorrido() {
+  const a = calidadAntes
+  calidadAntes = null
+  if (a) useStore.setState({ quality: a.quality, qualityLocked: a.locked })
+}
+
 export default function Scene() {
   const controls = useRef<CameraControls>(null)
+  const terminal = useRef<THREE.Group>(null)
+  const ciudad = useRef<THREE.Group>(null)
+  const enXR = useEnXR()
+  const aPie = modoVR((s) => s.aPie)
+  // La cámara libre se apaga mientras se camina, en el visor o en la pantalla.
+  const libre = !enXR && !aPie
   const view = useStore((s) => s.view)
   const tour = useStore((s) => s.tour)
   const zone = useZone('montevideo')
@@ -146,7 +174,7 @@ export default function Scene() {
       }
     }
     c.setLookAt(px, py, pz, tx, ty, tz, true)
-  }, [view, zone])
+  }, [view, zone, libre])
 
   // Recorrido guiado: vuelo lento entre encuadres; al terminar, vuelve a la vista elegida.
   const touring = useRef(false)
@@ -170,22 +198,30 @@ export default function Scene() {
     <>
       <Lighting />
       <Water />
-      <CameraControls ref={controls} minDistance={15} maxDistance={24000} maxPolarAngle={1.5} dollyToCursor infinityDolly />
+      {libre && <CameraControls ref={controls} minDistance={15} maxDistance={24000} maxPolarAngle={1.5} dollyToCursor infinityDolly />}
       <Clock />
-      <Follow controls={controls} />
-      <FreeNav controls={controls} />
-      {zone && <World zone={zone} />}
-      <group position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
+      {libre && <Follow controls={controls} />}
+      {libre && <FreeNav controls={controls} />}
+      {zone && (
+        <group ref={ciudad}>
+          <World zone={zone} />
+        </group>
+      )}
+      {/* Lo fijo de la terminal (piso, patio, grúas) se puede chocar caminando; camiones y straddle carriers se mueven. */}
+      <group ref={terminal} position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
         <TerminalPad />
         <Yard />
         <Cranes />
+      </group>
+      <group position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
         <Trucks />
         <StraddleCarriers />
       </group>
       <Ships />
       <FeedShips />
       <ScaleComparison />
-      <Effects />
+      <Recorrido config={() => configRecorrido(terminal, ciudad)} cerca={0.1} lejos={12000} alEntrar={alEntrarRecorrido} alSalir={alSalirRecorrido} />
+      {!enXR && <Effects />}
     </>
   )
 }

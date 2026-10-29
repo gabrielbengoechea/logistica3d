@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer, Sky, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import { useStore } from '../store'
+import { useEnXR } from '../vr/r3f'
 import { SHARED, dayLight, updateGlow, type DayLight } from './environment'
 import { TERMINAL } from './layout'
 
@@ -30,6 +31,8 @@ export default function Lighting() {
   const stars = useRef<THREE.Points>(null)
   const scene = useThree((s) => s.scene)
   const quality = useStore((s) => s.quality)
+  // En el visor el cielo se acerca para que entre en el plano lejano (el sombreador solo usa la dirección).
+  const enXR = useEnXR()
   const light = useRef<DayLight | undefined>(undefined)
   const shadows = quality !== 'baja'
 
@@ -77,7 +80,7 @@ export default function Lighting() {
 
   return (
     <>
-      <Sky ref={sky} distance={45000} turbidity={5} rayleigh={1.1} mieCoefficient={0.004} mieDirectionalG={0.85} />
+      <Sky ref={sky} distance={enXR ? 9000 : 45000} turbidity={5} rayleigh={1.1} mieCoefficient={0.004} mieDirectionalG={0.85} />
       <Stars ref={stars} radius={20000} depth={4000} count={3000} factor={60} saturation={0} fade />
       <fog attach="fog" args={['#cfdfeb', 7000, 32000]} />
       <hemisphereLight ref={hemi} args={['#eaf4ff', '#9fb1c2', 1.1]} />
