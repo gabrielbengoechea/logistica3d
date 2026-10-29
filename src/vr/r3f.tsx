@@ -111,7 +111,7 @@ export function Recorrido({ config, cerca = 0.08, lejos = 9000, alEntrar, alSali
       },
     })
     rec.current = r
-    if (depurar) Object.assign(window, { __vr: { recorrido: r, jugador: r.jugador, mundo: r.mundo } })
+    if (depurar) Object.assign(window, { __vr: { recorrido: r, jugador: r.jugador, mundo: r.mundo, gl, escena: scene } })
     // Un cuadro de margen: la escena termina de montarse con la calidad del visor antes de armar las colisiones.
     const t = setTimeout(() => r.iniciar(), 50)
     return () => {
@@ -149,7 +149,7 @@ export function Recorrido({ config, cerca = 0.08, lejos = 9000, alEntrar, alSali
       persp.fov = 70
       persp.updateProjectionMatrix()
       caminata.current = { c, j }
-      if (depurar) Object.assign(window, { __vr: { jugador: j, caminata: c, mundo } })
+      if (depurar) Object.assign(window, { __vr: { jugador: j, caminata: c, mundo, gl, escena: scene } })
     }, 50)
     return () => {
       clearTimeout(t)
