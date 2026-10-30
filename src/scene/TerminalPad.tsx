@@ -6,6 +6,8 @@ import FarLabel from './FarLabel'
 import { AMP, AMP_QUAY, BERTHS, LAND_Y, MAX_BERTHS, QUAY, YARD, berthToTerminal } from './layout'
 import { box, getConcreteTexture, getHaloTexture } from './materials'
 import Tag from './Tag'
+import Senalizacion from './Senalizacion'
+import { GATE_IN_X, GATE_OUT_X, Z_CABINA_IN, Z_CABINA_OUT } from './trafico/red'
 import { useGlowMaterial, useHaloMaterial } from './useGlow'
 
 const flat = -Math.PI / 2
@@ -82,8 +84,12 @@ export default function TerminalPad() {
       <Asphalt x={-356} z={380} w={14} d={540} />
       <Asphalt x={205} z={400} w={14} d={560} />
       <Asphalt x={-62} z={644} w={545} d={46} />
+      {/* accesos de la portería (entrada x 193-207, salida x 173-181) hasta el Acceso */}
+      <Asphalt x={200} z={775} w={17} d={270} />
+      <Asphalt x={177} z={782} w={10} d={250} />
       <QuayEdge length={QUAY_LEN} x={QUAY_MID} z={0} a={0} />
       <YardMarks />
+      <Senalizacion />
       <Masts />
       <Buildings />
 
@@ -242,17 +248,9 @@ function Buildings() {
   const windows = useGlowMaterial('#ffd79a', 0.05, 2.2)
   return (
     <>
-      {/* Portería: techo sobre los carriles de entrada y salida */}
-      <mesh position={[205, LAND_Y + 7.5, 700]} castShadow receiveShadow>
-        <boxGeometry args={[30, 1.2, 70]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.5} />
-      </mesh>
-      {[675, 692, 708, 725].map((z) => (
-        <mesh key={z} position={[205, LAND_Y + 3.5, z]} castShadow>
-          <boxGeometry args={[3, 7, 3]} />
-          <meshStandardMaterial color="#cfd8e3" />
-        </mesh>
-      ))}
+      {/* Portería: un techo sobre los 4 carriles de entrada (cabinas en z = 735) y otro sobre los 2 de salida */}
+      <Porteria xs={GATE_IN_X} z={Z_CABINA_IN} sentido={-1} />
+      <Porteria xs={GATE_OUT_X} z={Z_CABINA_OUT} sentido={1} />
       {/* Oficinas */}
       <mesh position={[100, LAND_Y + 8, 735]} castShadow receiveShadow>
         <boxGeometry args={[70, 16, 30]} />
@@ -271,6 +269,42 @@ function Buildings() {
       <mesh position={[-290, LAND_Y + 6, 700]} castShadow receiveShadow>
         <boxGeometry args={[60, 12, 40]} />
         <meshStandardMaterial color="#b8c4d2" roughness={0.7} metalness={0.2} />
+      </mesh>
+    </>
+  )
+}
+
+/** Techo de portería sobre carriles de 3,6 m: islas con cabina entre carriles y barreras. */
+function Porteria({ xs, z, sentido }: { xs: number[]; z: number; sentido: number }) {
+  const geo = useMemo(() => {
+    const x0 = Math.min(...xs) - 1.8
+    const x1 = Math.max(...xs) + 1.8
+    const techo = [box((x0 + x1) / 2, LAND_Y + 6.6, z, x1 - x0 + 3, 0.6, 14)]
+    const islas: THREE.BufferGeometry[] = []
+    const cabinas: THREE.BufferGeometry[] = []
+    const barreras: THREE.BufferGeometry[] = []
+    const bordes = [x0, ...xs.slice(1).map((x, i) => (x + xs[i]) / 2), x1]
+    for (const bx of bordes) {
+      islas.push(box(bx, LAND_Y + 0.12, z, 0.9, 0.24, 9))
+      cabinas.push(box(bx, LAND_Y + 1.5, z + sentido * 1.5, 0.8, 2.6, 1.8))
+      techo.push(box(bx, LAND_Y + 3.4, z - sentido * 3.5, 0.3, 6.4, 0.3))
+    }
+    for (const x of xs) barreras.push(box(x - 0.2, LAND_Y + 1.1, z - sentido * 1.5, 3.0, 0.12, 0.12))
+    return { techo: merge(techo), islas: merge(islas), cabinas: merge(cabinas), barreras: merge(barreras) }
+  }, [xs, z, sentido])
+  return (
+    <>
+      <mesh geometry={geo.techo} castShadow receiveShadow>
+        <meshStandardMaterial color="#f8fafc" roughness={0.5} />
+      </mesh>
+      <mesh geometry={geo.islas} receiveShadow>
+        <meshStandardMaterial color="#f2c230" roughness={0.8} />
+      </mesh>
+      <mesh geometry={geo.cabinas} castShadow>
+        <meshStandardMaterial color="#cfd8e3" roughness={0.4} metalness={0.2} />
+      </mesh>
+      <mesh geometry={geo.barreras}>
+        <meshStandardMaterial color="#ef4444" roughness={0.6} />
       </mesh>
     </>
   )

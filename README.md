@@ -31,6 +31,36 @@ Para probar sin visor: `?emular=1` simula un Quest en la computadora y `?debug=1
 
 El código del recorrido está en `src/vr/` (tutorial, mundo de colisión, jugador, locomoción) y tiene sus pruebas en `fisica.test.ts`.
 
+
+## Terminal con el kit portuario (fase 1 de la mejora visual)
+
+- **Modelos nuevos** (`tools/blender/kit_portuario`, todo generado con scripts de Blender):
+  - grúas STS con celosías, carro, cabina, poleas, cables, spreader telescópico y twistlocks animados;
+  - buques Feeder, Panamax y Post-Panamax con casco de verdad, tapas de bodega, puentes de trinca y superestructura;
+  - contenedores ISO de 20' y 40' con esquineros y corrugado horneado, en 8 libreas de navieras inventadas;
+  - camiones con semirremolque esqueleto.
+
+  Atlas PBR de 2048², LOD por distancia y colisiones convexas `UCX_` (la caminata en VR choca contra ellas).
+- **Fondo liviano**: el relieve y la ciudad bajaron de ~590.000 a menos de 15.000 triángulos.
+  - El relieve usa una grilla fina cerca del puerto que se agranda lejos.
+  - Quedan 70 edificios como hitos y el resto se agrupa por manzanas (`src/scene/fondo.ts`, con su prueba).
+  - Toda la escena dibuja unas 3 veces menos triángulos y un 35 % menos de llamadas de dibujo.
+- **Agua**:
+  - reflejos dinámicos de buques y grúas, solo en calidad alta y fuera del visor;
+  - espuma alrededor de los cascos, que crece con la velocidad y en la proa.
+- **Piso señalizado**, generado desde la red de tránsito:
+  - bordes de carril, flechas de sentido, PARE, número de carril y velocidad máxima;
+  - recuadros de las 4 bahías de intercambio;
+  - numeración de cada fila del patio (A01…X10);
+  - franja de peligro de la zona de las grúas.
+- **Tránsito** (`src/scene/trafico/`): reemplaza los recorridos lineales.
+  - Los caminos son rectas y arcos con radio mínimo de 12 m.
+  - Los vehículos usan cinemática de bicicleta con seguimiento por persecución pura y semirremolque articulado.
+  - Un sensor frontal (esfera barrida por el camino) frena ante otros vehículos y ante las patas de las grúas.
+  - Las zonas de conflicto (uniones, cruces y bolsillos) se calculan solas y se reservan sin bloqueos en ciclo.
+  - Cada camión elige su carril de portería (la cola más corta), una bahía libre y su carril de salida. Los straddle carriers pasan bajo las grúas a lo largo del muelle.
+  - La prueba `gestor.test.ts` corre 10 minutos de tránsito y verifica tres cosas: que ningún par de vehículos se superponga, que el error lateral quede por debajo de 1 m y que nadie quede trabado.
+
 ## Correr
 
 ```bash

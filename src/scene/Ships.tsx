@@ -1,13 +1,13 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Edges, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { mulberry32 } from '../sim/rng'
 import type { Track } from '../sim/tracks'
 import { useStore } from '../store'
-import { CONTAINER_COLORS } from './layout'
 import { LAND_Y } from './layout'
-import { getContainerTexture, strut } from './materials'
+import { strut } from './materials'
+import { KIT_URL, LIBREAS, Lods, clonar, mallaContenedores, usePaquete } from './kit/kit'
 import { useGlowMaterial } from './useGlow'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { shipPose } from './pose'
@@ -16,7 +16,6 @@ import Wake from './Wake'
 import { lejosEnVR } from '../vr/estado'
 import { useEnXR } from '../vr/r3f'
 
-const HULL_H = 13
 const FUNNEL_COLORS = ['#c94a3d', '#1f6fb5', '#e8a33b', '#2e8b57', '#f8fafc']
 
 /** Contorno del casco visto desde arriba (proa redondeada hacia +x, popa con esquinas suaves). */
@@ -68,7 +67,7 @@ function Ship({ track }: { track: Track }) {
   const { length: L, beam: B, id, name } = track.ship
   const select = useStore((s) => s.select)
   const selected = useStore((s) => s.selection?.kind === 'ship' && s.selection.id === id)
-  const mooring = useMemo(() => mooringLines(L, B), [L, B])
+  const mooring = useMemo(() => mooringLines(L, B, cubiertaDe(B)), [L, B])
   const enXR = useEnXR()
 
   useFrame(() => {
@@ -115,7 +114,7 @@ function Ship({ track }: { track: Track }) {
  * Amarras de proa, popa y springs, desde la cubierta hasta las bitas del muelle. El muelle queda del lado +z
  * del buque (a manga/2 + 4 m) y 3 m sobre el agua.
  */
-function mooringLines(L: number, B: number) {
+function mooringLines(L: number, B: number, HULL_H: number) {
   const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
   const deckZ = B / 2 - 0.5
   const quayZ = B / 2 + 4 + 2.2
@@ -164,40 +163,79 @@ function Tug({ position }: { position: [number, number, number] }) {
 }
 
 /** Luces de navegación: roja a babor (-z), verde a estribor (+z), blancas en el mástil y la popa. */
-function NavLights({ L, B }: { L: number; B: number }) {
+function NavLights({ L, B, sx, puente }: { L: number; B: number; sx: number; puente: number }) {
   const red = useGlowMaterial('#ff3b30', 0.15, 9)
   const green = useGlowMaterial('#2fe06b', 0.15, 9)
   const white = useGlowMaterial('#fff8e7', 0.1, 8)
-  const deck = useGlowMaterial('#ffd99a', 0.05, 3)
-  const sx = -L / 2 + 15
   return (
     <>
-      <mesh position={[sx + 1, HULL_H + 26, -(B / 2 + 1.6)]} material={red}>
-        <sphereGeometry args={[0.8, 8, 8]} />
+      <mesh position={[sx, puente + 2.2, -(B / 2 + 0.6)]} material={red}>
+        <sphereGeometry args={[0.6, 8, 8]} />
       </mesh>
-      <mesh position={[sx + 1, HULL_H + 26, B / 2 + 1.6]} material={green}>
-        <sphereGeometry args={[0.8, 8, 8]} />
+      <mesh position={[sx, puente + 2.2, B / 2 + 0.6]} material={green}>
+        <sphereGeometry args={[0.6, 8, 8]} />
       </mesh>
-      <mesh position={[sx, HULL_H + 34.8, 0]} material={white}>
-        <sphereGeometry args={[0.8, 8, 8]} />
+      <mesh position={[sx, puente + 11.5, 0]} material={white}>
+        <sphereGeometry args={[0.6, 8, 8]} />
       </mesh>
-      <mesh position={[L / 2 - 12, HULL_H + 3, 0]} material={white}>
-        <sphereGeometry args={[0.7, 8, 8]} />
+      <mesh position={[L / 2 - 12, puente * 0.6, 0]} material={white}>
+        <sphereGeometry args={[0.6, 8, 8]} />
       </mesh>
-      <mesh position={[-L / 2 + 0.5, HULL_H + 2, 0]} material={white}>
-        <sphereGeometry args={[0.7, 8, 8]} />
-      </mesh>
-      {[7, 12, 17, 22].map((y) => (
-        <mesh key={y} position={[sx + 8.15, HULL_H + y, 0]} material={deck}>
-          <boxGeometry args={[0.2, 0.9, B * 0.7]} />
-        </mesh>
-      ))}
     </>
   )
 }
 
-/** Modelo de un buque portacontenedores (proa hacia +x), con contenedores opcionales y etiqueta. */
-export function ShipBody({
+const VARIANTES = ['Feeder', 'Panamax', 'PostPanamax'] as const
+type Variante = (typeof VARIANTES)[number]
+/** Clase del modelo según la manga (las 3 clases del simulador; los buques reales del AIS toman la más parecida). */
+export const varianteDe = (beam: number): Variante => (beam <= 29 ? 'Feeder' : beam <= 38 ? 'Panamax' : 'PostPanamax')
+
+interface DatosVariante {
+  eslora_m: number
+  manga_m: number
+  puntal_m: number
+  bahias_x: number[]
+  filas: number
+  paso_fila_m: number
+  carga_z: number
+  casa_x0: number
+  casa_largo: number
+  puente_z: number
+  lod_distancias_m: number[]
+}
+
+/** Altura de la cubierta de un buque del kit (para amarras y comparaciones). */
+export function cubiertaDe(beam: number) {
+  return { Feeder: 14.5, Panamax: 19.5, PostPanamax: 24.5 }[varianteDe(beam)]
+}
+
+/** Nombre pintado en proa y popa: canvas con letras blancas sobre transparente. */
+function nombreTextura(nombre: string) {
+  const c = document.createElement('canvas')
+  c.width = 1024
+  c.height = 128
+  const g = c.getContext('2d')!
+  g.fillStyle = '#f4f4f0'
+  g.font = '700 92px "Inter", "Helvetica Neue", Arial, sans-serif'
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillText(nombre.toUpperCase().slice(0, 22), 512, 68)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 4
+  return t
+}
+
+/** Modelo de un buque portacontenedores del kit (proa hacia +x), con contenedores opcionales y etiqueta. */
+export function ShipBody(props: Parameters<typeof ShipBodyKit>[0]) {
+  return (
+    <Suspense fallback={null}>
+      <ShipBodyKit {...props} />
+    </Suspense>
+  )
+}
+
+function ShipBodyKit({
   length: L,
   beam: B,
   seed,
@@ -219,104 +257,81 @@ export function ShipBody({
   cargoRef?: React.RefObject<THREE.InstancedMesh | null>
   tagRef?: React.Ref<HTMLDivElement>
 }) {
-  const parts = useMemo(
-    () => ({
-      bottom: hullGeometry(L, B, 2.4),
-      boot: hullGeometry(L * 1.001, B * 1.01, 0.7, 2.4),
-      top: hullGeometry(L, B, HULL_H - 3.1, 3.1),
-    }),
-    [L, B],
-  )
-  const stack = useMemo(() => {
+  const kit = usePaquete(KIT_URL.buques)
+  const cont = usePaquete(KIT_URL.contenedores)
+  const { camera } = useThree()
+  const variante = varianteDe(B)
+  const modelo = useMemo(() => {
+    const raiz = clonar(kit.scene, `Ship_${variante}`)
+    const d = raiz.userData as DatosVariante
+    const sx = L / d.eslora_m
+    const sz = B / d.manga_m
+    raiz.scale.set(sx, 1, sz)
     const rand = mulberry32(seed)
-    const bow = Math.min(B * 1.6, L * 0.22)
-    const rows = Math.max(3, Math.floor((B * 0.86) / 2.55))
-    const bays: { x: number; tiers: number }[] = []
-    for (let x = -L / 2 + 34; x < L / 2 - bow * 0.75; x += 13.2) bays.push({ x, tiers: 3 + Math.floor(rand() * 4) })
-    const items: { x: number; y: number; z: number; color: string }[] = []
+    // franja de la chimenea con el color de la naviera y nombre del buque
+    const banda = FUNNEL_COLORS[Math.floor(rand() * FUNNEL_COLORS.length)]
+    const nombre = nombreTextura(label.split(' · ').pop() ?? label)
+    raiz.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+      if (m.name.startsWith('Funnel_Band')) m.material = new THREE.MeshStandardMaterial({ color: banda, roughness: 0.45 })
+      if (m.name.startsWith('Ship_Name')) m.material = new THREE.MeshStandardMaterial({ map: nombre, transparent: true, alphaTest: 0.4, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2 })
+      o.layers.enable(1)
+    })
+    return { raiz, d, sx, sz, lods: new Lods(raiz, d.lod_distancias_m ?? [0, 450, 1800]), nombre }
+  }, [kit.scene, variante, L, B, seed, label])
+  useEffect(() => () => modelo.nombre.dispose(), [modelo])
+
+  // contenedores sobre las tapas de bodega: bahías del modelo (escaladas a la eslora) × filas × niveles al azar
+  const stack = useMemo(() => {
+    const rand = mulberry32(seed * 31 + 7)
+    const { d, sx, sz } = modelo
+    const bays = d.bahias_x.map((x) => ({ x: x * sx, tiers: 3 + Math.floor(rand() * 4) }))
+    const rows = d.filas
+    const items: { x: number; y: number; z: number; livery: number }[] = []
     const maxTier = Math.max(...bays.map((b) => b.tiers), 0)
     // Orden por altura: con count se esconden primero los de arriba.
     for (let tier = 0; tier < maxTier; tier++)
       for (const b of bays)
         for (let r = 0; r < rows; r++)
-          if (tier < b.tiers) items.push({ x: b.x, y: HULL_H + 1.3 + tier * 2.6, z: (r - (rows - 1) / 2) * 2.55, color: CONTAINER_COLORS[Math.floor(rand() * CONTAINER_COLORS.length)] })
-    return { items, funnel: FUNNEL_COLORS[Math.floor(rand() * FUNNEL_COLORS.length)] }
-  }, [L, B, seed])
+          if (tier < b.tiers) items.push({ x: b.x, y: d.carga_z + tier * 2.591, z: (r - (rows - 1) / 2) * d.paso_fila_m * sz, livery: Math.floor(rand() * LIBREAS) })
+    return items
+  }, [modelo, seed])
 
   const ownCargo = useRef<THREE.InstancedMesh>(null)
   const mesh = cargoRef ?? ownCargo
+  const instanced = useMemo(() => (cargo ? mallaContenedores(cont.scene, '40', Math.max(1, stack.length)) : null), [cont.scene, stack.length, cargo])
   useLayoutEffect(() => {
-    const m = mesh.current
+    const m = instanced
     if (!m) return
     const o = new THREE.Object3D()
-    const c = new THREE.Color()
-    stack.items.forEach((it, i) => {
+    const lib = m.geometry.getAttribute('aLibrea') as THREE.InstancedBufferAttribute
+    stack.forEach((it, i) => {
       o.position.set(it.x, it.y, it.z)
       o.updateMatrix()
       m.setMatrixAt(i, o.matrix)
-      m.setColorAt(i, c.set(it.color))
+      lib.setX(i, it.livery)
     })
+    lib.needsUpdate = true
     m.instanceMatrix.needsUpdate = true
-    if (m.instanceColor) m.instanceColor.needsUpdate = true
-    m.userData.total = stack.items.length
-    m.count = stack.items.length
+    m.userData.total = stack.length
+    m.count = stack.length
     m.computeBoundingSphere()
-  }, [stack, mesh])
+    m.layers.enable(1)
+    if (mesh && 'current' in mesh) (mesh as React.MutableRefObject<THREE.InstancedMesh | null>).current = m
+  }, [stack, instanced, mesh])
 
-  const sx = -L / 2 + 15
-  const top = HULL_H
+  useFrame(() => {
+    modelo.lods.actualizar(camera)
+  })
+
+  const { d, sx } = modelo
+  const casaX = (d.casa_x0 + d.casa_largo * 0.75) * sx
   return (
     <>
-      <mesh geometry={parts.bottom} castShadow receiveShadow>
-        <meshStandardMaterial color="#b4432f" roughness={0.75} />
-      </mesh>
-      <mesh geometry={parts.boot}>
-        <meshStandardMaterial color="#f1f5f9" roughness={0.6} />
-      </mesh>
-      <mesh geometry={parts.top} castShadow receiveShadow>
-        <meshStandardMaterial color="#1f3557" roughness={0.65} metalness={0.1} />
-      </mesh>
-      {/* Superestructura en popa: alojamiento con ventanas, puente con alerones, chimenea y mástil */}
-      <group position={[sx, top, 0]}>
-        <mesh position={[0, 12, 0]} castShadow>
-          <boxGeometry args={[16, 24, B * 0.78]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.5} />
-        </mesh>
-        {[7, 12, 17, 22].map((y) => (
-          <mesh key={y} position={[0.2, y, 0]}>
-            <boxGeometry args={[16.2, 1.1, B * 0.79]} />
-            <meshStandardMaterial color="#334155" roughness={0.2} metalness={0.4} />
-          </mesh>
-        ))}
-        <mesh position={[1, 25.8, 0]} castShadow>
-          <boxGeometry args={[11, 3.6, B + 3]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.5} />
-        </mesh>
-        <mesh position={[6.6, 26, 0]}>
-          <boxGeometry args={[0.3, 1.6, B + 2.6]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.15} metalness={0.5} />
-        </mesh>
-        <mesh position={[0, 31, 0]}>
-          <boxGeometry args={[0.6, 7, 0.6]} />
-          <meshStandardMaterial color="#e2e8f0" />
-        </mesh>
-        <mesh position={[-10, 17, 0]} castShadow>
-          <boxGeometry args={[6, 14, 7]} />
-          <meshStandardMaterial color="#f1f5f9" roughness={0.5} />
-        </mesh>
-        <mesh position={[-10, 22.5, 0]}>
-          <boxGeometry args={[6.1, 3, 7.1]} />
-          <meshStandardMaterial color={stack.funnel} roughness={0.5} />
-        </mesh>
-      </group>
-      <NavLights L={L} B={B} />
-      {/* Contenedores sobre cubierta, uno por uno */}
-      {cargo && (
-        <instancedMesh ref={mesh} args={[undefined, undefined, stack.items.length]} castShadow receiveShadow>
-          <boxGeometry args={[12.2, 2.5, 2.42]} />
-          <meshStandardMaterial map={getContainerTexture()} roughness={0.7} />
-        </instancedMesh>
-      )}
+      <primitive object={modelo.raiz} />
+      <NavLights L={L} B={B} sx={casaX} puente={d.puente_z} />
+      {instanced && <primitive object={instanced} />}
       {selected && (
         <mesh position={[0, 20, 0]}>
           <boxGeometry args={[L + 14, 40, B + 14]} />
@@ -325,7 +340,7 @@ export function ShipBody({
         </mesh>
       )}
       {tag && (
-        <Html position={[0, 48, 0]} center zIndexRange={[20, 0]}>
+        <Html position={[0, d.puente_z + 22, 0]} center zIndexRange={[20, 0]}>
           <div ref={tagRef}>
             <Tag tone={selected ? 'accent' : 'plain'}>{label}</Tag>
           </div>

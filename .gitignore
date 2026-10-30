@@ -4,3 +4,4 @@ data/
 __pycache__/
 .venv/
 *.log
+tools/blender/kit_portuario/salida/

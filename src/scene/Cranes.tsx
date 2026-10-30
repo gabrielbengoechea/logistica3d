@@ -1,95 +1,148 @@
-import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { cranesOnShift } from '../sim/terminalSim'
 import { phaseAt } from '../sim/tracks'
 import { useStore } from '../store'
 import { BERTHS, LAND_Y, craneLocalX } from './layout'
-import { box, getContainerTexture, getHaloTexture, strut } from './materials'
-import { useGlowMaterial, useHaloMaterial } from './useGlow'
+import { getHaloTexture } from './materials'
+import { useHaloMaterial } from './useGlow'
+import { KIT_URL, LIBREAS, LIBREA_DV, Lods, clonar, ejeLocal, usePaquete } from './kit/kit'
 
 /**
- * Grúa pórtico de muelle (STS), en su marco: x a lo largo del muelle, z hacia tierra, z < 0 sobre el agua.
- * Patas a 6 y 34 m del borde (trocha de 28 m), viga portal a ~44 m, pluma de 115 m que llega 60 m sobre
- * el agua, pórtico en A con tensores hacia la punta y la cola de la pluma.
+ * Grúas pórtico de muelle (STS) del kit portuario, en el marco de su puesto: x a lo largo del muelle, z hacia tierra,
+ * z < 0 sobre el agua. Patas a 6 y 34 m del borde (trocha de 28 m), viga portal a 44 m, pluma con 60 m de alcance.
+ *
+ * Cada grúa es una copia del activo STS_Crane con su número en el tablero (atlas: STS 01…12), LOD por distancia
+ * (estructura de 5.000 / 700 / 300 triángulos) y el ciclo de descarga sobre sus nodos reales: el carro (Trolley) se
+ * traslada por la pluma, el spreader baja con los cables, los twistlocks giran para trabar el contenedor.
  */
-const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
-
-function buildFrame() {
-  const parts: THREE.BufferGeometry[] = []
-  for (const x of [-9, 9]) {
-    for (const z of [6, 34]) parts.push(box(x, 22, z, 2.2, 44, 2.2))
-    parts.push(box(x, 12, 20, 1.6, 2, 28)) // viga baja entre patas
-    parts.push(box(x, 44, 20, 2.4, 3, 30)) // viga portal lateral
-    parts.push(strut(v(x, 13, 6), v(x, 43, 34), 1)) // diagonal
-    // Pórtico en A sobre las patas de tierra.
-    parts.push(strut(v(x, 46, 34), v(x * 0.7, 72, 28), 1.6))
-    parts.push(strut(v(x, 46, 12), v(x * 0.7, 72, 28), 1.3))
-    // Tensores: del ápice a la punta de la pluma y a la cola.
-    parts.push(strut(v(x * 0.7, 72, 28), v(x * 0.3, 49, -60), 0.6))
-    parts.push(strut(v(x * 0.7, 72, 28), v(x * 0.3, 49, -20), 0.5))
-    parts.push(strut(v(x * 0.7, 72, 28), v(x * 0.3, 49, 54), 0.6))
-    // Pluma: dos vigas paralelas.
-    parts.push(box(x * 0.3, 47.6, -4, 1.3, 2.8, 116))
-  }
-  for (const z of [6, 34]) parts.push(box(0, 44, z, 20, 3, 2.4)) // viga portal
-  parts.push(box(0, 72, 28, 13, 1.6, 1.6)) // ápice
-  for (let z = -58; z <= 50; z += 9) parts.push(box(0, 46.4, z, 6.4, 0.5, 0.6)) // travesaños de la pluma
-  return mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)))!
-}
-
-function buildDetails() {
-  const parts = [
-    box(0, 51.5, 44, 14, 6, 15), // sala de máquinas
-    box(0, 4, 6, 22, 2.6, 4), // bogies (ruedas) lado agua
-    box(0, 4, 34, 22, 2.6, 4), // bogies lado tierra
-  ]
-  return mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)))!
-}
-
-let shared: { frame: THREE.BufferGeometry; details: THREE.BufferGeometry } | null = null
-const geometries = () => (shared ??= { frame: buildFrame(), details: buildDetails() })
-
-/** Grúas de cada puesto habilitado, en el marco de su muelle (el tercero está sobre la ampliación, en otra cara). */
 export default function Cranes() {
   const berths = useStore((s) => s.params.berths)
   const n = useStore((s) => s.params.cranesPerBerth)
   return (
-    <>
+    <Suspense fallback={null}>
       {BERTHS.slice(0, berths).map((b, bi) => (
         <group key={bi} position={[b.x, 0, b.z]} rotation-y={b.a}>
           {Array.from({ length: n }, (_, i) => (
-            <Crane key={i} berth={bi} index={i} x={craneLocalX(i, n)} />
+            <Crane key={i} berth={bi} index={i} x={craneLocalX(i, n)} numero={bi * 4 + i + 1} />
           ))}
         </group>
       ))}
-    </>
+    </Suspense>
   )
 }
 
-function Crane({ berth, index, x }: { berth: number; index: number; x: number }) {
-  const trolley = useRef<THREE.Group>(null)
-  const load = useRef<THREE.Group>(null)
-  const clock = useRef(index * 0.37)
+/** Tablero del número de grúa: corre las UV del rectángulo "STS 01" del atlas a la casilla del número pedido. */
+function numerar(raiz: THREE.Object3D, numero: number) {
+  const k = (numero - 1) % 12
+  const du = (k % 6) * (168 / 2048)
+  const dv = Math.floor(k / 6) * (100 / 2048)
+  if (!du && !dv) return
+  raiz.traverse((o) => {
+    const m = o as THREE.Mesh
+    if (!m.isMesh || !/^STS_Structure_LOD0/.test(m.name)) return
+    const g = m.geometry.clone()
+    const uv = g.attributes.uv as THREE.BufferAttribute
+    const v0 = 1624 / 2048
+    const v1 = 1720 / 2048
+    for (let i = 0; i < uv.count; i++) {
+      const u = uv.getX(i)
+      const v = uv.getY(i)
+      if (u >= -1e-4 && u <= 160 / 2048 + 1e-4 && v >= v0 - 1e-4 && v <= v1 + 1e-4) uv.setXY(i, u + du, v + dv)
+    }
+    uv.needsUpdate = true
+    m.geometry = g
+  })
+}
+
+function Crane({ berth, index, x, numero }: { berth: number; index: number; x: number; numero: number }) {
+  const ind = usePaquete(KIT_URL.industrial)
+  const cont = usePaquete(KIT_URL.contenedores)
+  const { camera } = useThree()
   const select = useStore((s) => s.select)
   const selected = useStore((s) => s.selection?.kind === 'crane' && s.selection.berth === berth && s.selection.index === index)
-  const { frame, details } = geometries()
-  const flood = useGlowMaterial('#fff1cf', 0.1, 10)
   const halo = useHaloMaterial(getHaloTexture(), 0.65)
 
+  const rig = useMemo(() => {
+    const raiz = clonar(ind.scene, 'STS_Crane')
+    numerar(raiz, numero)
+    const trolley = raiz.getObjectByName('Trolley')!
+    const spreader = raiz.getObjectByName('Spreader')!
+    let ropes: THREE.Object3D = raiz
+    raiz.traverse((o) => {
+      if (/Hoist_Ropes/.test(o.name)) ropes = o
+    })
+    const twist = [...'AB'].flatMap((s) => [1, 2].map((k) => raiz.getObjectByName(`Twistlock_${s}${k}`)!)).filter(Boolean)
+    const ex = (raiz.userData ?? {}) as { carro?: { reposo_y: number }; spreader?: { reposo_z: number; polea_z: number }; lod_distancias_m?: number[] }
+    // el contenedor que lleva: 40' del kit, colgado de los twistlocks
+    const carga = clonar(cont.scene, 'Container_40')
+    carga.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+      if (/LOD1$/.test(m.name) || m.name.startsWith('UCX_')) m.visible = false
+      else {
+        // librea: corre las UV a una fila del atlas
+        const g = m.geometry.clone()
+        const uv = g.attributes.uv as THREE.BufferAttribute
+        const dv = ((numero * 3) % LIBREAS) * LIBREA_DV
+        for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) + dv)
+        m.geometry = g
+      }
+    })
+    const restZ = ex.spreader?.reposo_z ?? 40
+    // en el marco de la grúa: centro bajo el spreader en reposo, la cara superior contra los twistlocks
+    carga.position.set(0, restZ - 1.57 - 2.591, -(ex.carro?.reposo_y ?? -20))
+    raiz.add(carga)
+    raiz.updateMatrixWorld(true)
+    spreader.attach(carga)
+    return {
+      raiz,
+      trolley,
+      spreader,
+      ropes,
+      twist,
+      carga,
+      lods: new Lods(raiz, ex.lod_distancias_m ?? [0, 180, 700]),
+      tRest: trolley.position.clone(),
+      tAxis: ejeLocal(trolley),
+      sRest: spreader.position.clone(),
+      sAxis: ejeLocal(spreader),
+      restZ,
+      polea: ex.spreader?.polea_z ?? 51.6,
+      parkZ: -(ex.carro?.reposo_y ?? -20),
+    }
+  }, [ind.scene, cont.scene, numero])
+
+  // capa 1: entra en el reflejo del agua
+  useEffect(() => {
+    rig.raiz.traverse((o) => o.layers.enable(1))
+  }, [rig])
+
+  const clock = useRef(index * 0.37)
   useFrame((_, delta) => {
     const { tracks, t, params, playing } = useStore.getState()
     const working = cranesOnShift(t, params.craneHoursPerDay) && tracks.some((tr) => tr.berth === berth && phaseAt(tr, t, params).phase === 'working')
     if (playing && working) clock.current += delta * 0.22
-    // Ciclo: baja en el buque, sube, viaja a tierra, baja, sube y vuelve.
+    rig.lods.actualizar(camera)
+    // ciclo: baja en el buque, traba, sube, viaja a tierra, baja, destraba, sube y vuelve
     const c = clock.current % 1
     const travel = c < 0.5 ? (c < 0.15 ? 0 : (c - 0.15) / 0.35) : c < 0.65 ? 1 : 1 - (c - 0.65) / 0.35
     const smooth = travel * travel * (3 - 2 * travel)
-    trolley.current!.position.z = working ? -38 + smooth * 58 : 8
+    // posición del carro (marco de la grúa, z hacia tierra): sobre el buque −38, sobre la calle de transferencia +20
+    const zCarro = working ? -38 + smooth * 58 : rig.parkZ
+    rig.trolley.position.copy(rig.tRest).addScaledVector(rig.tAxis, rig.parkZ - zCarro)
+    // altura de la cara superior del spreader: baja hasta la bodega (18 m) o hasta la calle (4,2 m)
     const drop = working ? Math.max(0, 1 - Math.abs((c % 0.5) - 0.07) / 0.07) : 0
-    load.current!.position.y = -12 - drop * 18
-    load.current!.visible = working && c < 0.5
+    const fondo = c < 0.5 ? 18 : 4.2
+    const zSp = working ? 34 - drop * (34 - fondo) : rig.restZ
+    rig.spreader.position.copy(rig.sRest).addScaledVector(rig.sAxis, rig.restZ - zSp)
+    rig.ropes.scale.y = Math.max(0.1, rig.polea - zSp)
+    // traba en el fondo del primer descenso, destraba en el fondo del segundo
+    const trabado = working && c > 0.07 && c < 0.57
+    const ang = trabado ? Math.PI / 2 : 0
+    for (const tw of rig.twist) tw.rotation.y += (ang - tw.rotation.y) * Math.min(1, delta * 8)
+    rig.carga.visible = trabado
   })
 
   return (
@@ -100,52 +153,19 @@ function Crane({ berth, index, x }: { berth: number; index: number; x: number })
         select({ kind: 'crane', berth, index })
       }}
     >
-      <mesh geometry={frame} castShadow>
-        <meshStandardMaterial color={selected ? '#1d4ed8' : '#3a6fd8'} roughness={0.5} metalness={0.25} emissive={selected ? '#1d4ed8' : '#000000'} emissiveIntensity={0.25} />
-      </mesh>
-      <mesh geometry={details} castShadow>
-        <meshStandardMaterial color="#f1f5f9" roughness={0.5} />
-      </mesh>
-      <mesh position={[0, 73.5, 28]}>
-        <sphereGeometry args={[0.9, 8, 8]} />
-        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={1.5} />
-      </mesh>
-      {/* Reflectores bajo la pluma (sobre el buque) y bajo la viga portal (sobre el muelle) */}
-      {[-30, -8, 20].map((z) => (
-        <mesh key={z} position={[0, 45.6, z]} material={flood}>
-          <boxGeometry args={[4, 0.5, 1.4]} />
+      <primitive object={rig.raiz} />
+      {selected && (
+        <mesh position={[0, 36, 0]}>
+          <boxGeometry args={[24, 76, 120]} />
+          <meshBasicMaterial color="#2563eb" transparent opacity={0.06} depthWrite={false} />
         </mesh>
-      ))}
+      )}
       <mesh rotation-x={-Math.PI / 2} position={[0, -2.3, -24]} material={halo}>
         <planeGeometry args={[70, 70]} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.26, 18]} material={halo}>
         <planeGeometry args={[60, 50]} />
       </mesh>
-      <group ref={trolley} position={[0, 45, 8]}>
-        <mesh castShadow>
-          <boxGeometry args={[7, 2.5, 7]} />
-          <meshStandardMaterial color="#f2c230" roughness={0.5} />
-        </mesh>
-        <mesh position={[3.6, -2.4, 0]}>
-          <boxGeometry args={[2.4, 2.4, 2.6]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.15} metalness={0.5} />
-        </mesh>
-        <group ref={load}>
-          <mesh position={[0, 6, 0]}>
-            <boxGeometry args={[0.35, 12, 0.35]} />
-            <meshStandardMaterial color="#475569" />
-          </mesh>
-          <mesh position={[0, 0.3, 0]}>
-            <boxGeometry args={[12.6, 0.6, 2.8]} />
-            <meshStandardMaterial color="#f2c230" />
-          </mesh>
-          <mesh position={[0, -1.3, 0]} castShadow>
-            <boxGeometry args={[12.2, 2.6, 2.44]} />
-            <meshStandardMaterial color="#f47c3c" map={getContainerTexture()} roughness={0.7} />
-          </mesh>
-        </group>
-      </group>
     </group>
   )
 }

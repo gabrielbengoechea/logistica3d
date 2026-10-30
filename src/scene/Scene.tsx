@@ -13,11 +13,12 @@ import { TERMINAL, toWorld } from './layout'
 import ScaleComparison, { SCALE_AT } from './ScaleComparison'
 import Ships from './Ships'
 import TerminalPad from './TerminalPad'
-import Trucks from './Trucks'
+import Trafico from './Trafico'
 import World from './World'
 import Yard from './Yard'
-import StraddleCarriers from './StraddleCarriers'
+import { precargarKit } from './kit/kit'
 import { shipPose } from './pose'
+import { phaseAt } from '../sim/tracks'
 import { useZone } from './zone'
 import { TOURS } from '../didactic/tours'
 import { listenKeyboard, nav } from './navInput'
@@ -138,6 +139,8 @@ function alSalirRecorrido() {
   if (a) useStore.setState({ quality: a.quality, qualityLocked: a.locked })
 }
 
+precargarKit()
+
 export default function Scene() {
   const controls = useRef<CameraControls>(null)
   const terminal = useRef<THREE.Group>(null)
@@ -194,6 +197,12 @@ export default function Scene() {
     }
   }, [tour, zone])
 
+  // ?debug=1: deja el estado y la cámara a mano para las pruebas automáticas y para medir rendimiento
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).has('debug')) return
+    ;(window as unknown as Record<string, unknown>).__l3d = { useStore, controls: () => controls.current, toWorld, phaseAt }
+  }, [])
+
   return (
     <>
       <Lighting />
@@ -214,8 +223,7 @@ export default function Scene() {
         <Cranes />
       </group>
       <group position={[TERMINAL.x, 0, TERMINAL.z]} rotation-y={TERMINAL.yaw}>
-        <Trucks />
-        <StraddleCarriers />
+        <Trafico />
       </group>
       <Ships />
       <FeedShips />

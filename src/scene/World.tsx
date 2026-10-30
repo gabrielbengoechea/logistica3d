@@ -3,8 +3,8 @@ import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useEnXR } from '../vr/r3f'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { ENTRY, LAND_Y, MOUTH, PAD, anchorageSlot, toTerminal } from './layout'
+import { ENTRY, LAND_Y, MOUTH, PAD, TERMINAL, anchorageSlot, toTerminal } from './layout'
+import { PRESUPUESTO_FONDO, edificios, terreno } from './fondo'
 import { SHARED } from './environment'
 import { GROUND_COLORS, groundTexture } from './ground'
 import Tag from './Tag'
@@ -33,44 +33,16 @@ function Terrain({ zone }: { zone: Zone }) {
     })
   }, [zone.imageUrl])
 
-  // En el visor el relieve va con un vértice de cada tres (≈9 veces menos triángulos): de cerca se camina sobre
-  // la terminal, que es otro modelo, y la ciudad se ve desde lejos.
-  const enXR = useEnXR()
+  // Relieve liviano (fondo.ts): grilla no uniforme, fina cerca del puerto y gruesa lejos. Bajo el recinto portuario
+  // queda por debajo de la explanada de los muelles.
   const geometry = useMemo(() => {
-    const { extent, terrain } = zone.meta
     const port = portRing(zone)
     const [pxmin, pxmax, pzmin, pzmax] = port
       ? [Math.min(...port.map((p) => p[0])), Math.max(...port.map((p) => p[0])), Math.min(...port.map((p) => p[1])), Math.max(...port.map((p) => p[1]))]
       : [0, 0, 0, 0]
     const inPort = (x: number, z: number) => !!port && x > pxmin && x < pxmax && z > pzmin && z < pzmax && inRing(port, x, z)
-    const paso = enXR ? 3 : 1
-    const sc = Math.ceil((terrain.cols - 1) / paso)
-    const sr = Math.ceil((terrain.rows - 1) / paso)
-    const W = extent.xmax - extent.xmin
-    const H = extent.zmax - extent.zmin
-    const g = new THREE.PlaneGeometry(W, H, sc, sr)
-    g.rotateX(-Math.PI / 2)
-    const pos = g.attributes.position as THREE.BufferAttribute
-    const uv = g.attributes.uv as THREE.BufferAttribute
-    // Cada vértice toma la muestra real de la grilla del relieve (fila r, columna c; las últimas quedan en el borde).
-    for (let r = 0; r <= sr; r++)
-      for (let c = 0; c <= sc; c++) {
-        const i = r * (sc + 1) + c
-        const fc = Math.min(c * paso, terrain.cols - 1)
-        const fr = Math.min(r * paso, terrain.rows - 1)
-        const x = extent.xmin + (fc / (terrain.cols - 1)) * W
-        const z = extent.zmin + (fr / (terrain.rows - 1)) * H
-        let h = zone.heights[fr * terrain.cols + fc]
-        // Bajo el recinto portuario el relieve queda por debajo de la explanada de los muelles.
-        if (insidePad(x, z, 60) || inPort(x, z)) h = Math.min(h, 1)
-        pos.setXYZ(i, x, h, z)
-        uv.setXY(i, (x - extent.xmin) / W, 1 - (z - extent.zmin) / H)
-      }
-    g.computeVertexNormals()
-    g.computeBoundingBox()
-    g.computeBoundingSphere()
-    return g
-  }, [zone, enXR])
+    return terreno(zone, [TERMINAL.x, TERMINAL.z], (x, z) => insidePad(x, z, 60) || inPort(x, z))
+  }, [zone])
 
   const material = useMemo(() => {
     if (!texture) return null
@@ -124,41 +96,37 @@ function Terrain({ zone }: { zone: Zone }) {
     return m
   }, [texture, ground, zone])
 
+  FONDO.terreno = (geometry.index?.count ?? 0) / 3
   if (!material) return null
   return <mesh geometry={geometry} material={material} receiveShadow />
 }
 
-/** Edificios reales (Overture / OpenStreetMap) extruidos a su altura, en un solo mesh. */
+/**
+ * Edificios reales (Overture / OpenStreetMap) en versión de fondo: los hitos como prismas orientados a su altura y el
+ * resto agrupado por manzanas (fondo.ts). Relieve + edificios quedan por debajo de 15.000 triángulos.
+ */
 function Buildings({ zone }: { zone: Zone }) {
   const geometry = useMemo(() => {
-    const parts: THREE.BufferGeometry[] = []
     const port = portRing(zone)
-    for (const b of zone.vectors.buildings) {
-      const [x0, z0] = b.ring[0]
-      if (insidePad(x0, z0, 20)) continue
-      const shape = new THREE.Shape(b.ring.map(([x, z]) => new THREE.Vector2(x, -z)))
-      const g = new THREE.ExtrudeGeometry(shape, { depth: b.h, bevelEnabled: false })
-      g.rotateX(-Math.PI / 2)
-      // En el puerto, los edificios se apoyan en la explanada de los muelles.
-      g.translate(0, port && inRing(port, x0, z0) ? LAND_Y : Math.max(0, heightAt(zone, x0, z0)), 0)
-      const flat = g.index ? g.toNonIndexed() : g
-      // Un color de fachada por edificio, sorteado según su posición.
-      const color = FACADES[Math.abs(Math.floor(x0 * 7.13 + z0 * 3.71)) % FACADES.length]
-      const colors = new Float32Array(flat.attributes.position.count * 3)
-      for (let i = 0; i < colors.length; i += 3) colors.set([color.r, color.g, color.b], i)
-      flat.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-      flat.deleteAttribute('uv')
-      parts.push(flat)
-    }
-    const merged = mergeGeometries(parts)
-    parts.forEach((p) => p.dispose())
-    merged?.computeVertexNormals()
-    return merged
+    const r = edificios(
+      zone,
+      (x, z) => insidePad(x, z, 20),
+      (x, z) => (port && inRing(port, x, z) ? LAND_Y : Math.max(0, heightAt(zone, x, z))),
+      FACADES,
+      PRESUPUESTO_FONDO - 6200,
+    )
+    FONDO.edificios = r.tris
+    FONDO.hitos = r.hitos
+    FONDO.bloques = r.bloques
+    return r.geo
   }, [zone])
   const material = useMemo(() => buildingMaterial(), [])
   if (!geometry) return null
   return <mesh geometry={geometry} material={material} castShadow receiveShadow />
 }
+
+/** Triángulos del fondo (para el panel de depuración y las pruebas). */
+export const FONDO = { terreno: 0, edificios: 0, hitos: 0, bloques: 0 }
 
 const FACADES = ['#efe9df', '#e6dfd2', '#dcd6cc', '#f4f0e9', '#d8cfbf', '#e9dcc8', '#cfd4da', '#eadfcf', '#d4c6b1', '#f0ebe3'].map(
   (c) => new THREE.Color(c),
