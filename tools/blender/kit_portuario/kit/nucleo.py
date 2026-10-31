@@ -304,6 +304,9 @@ def auto_pivot(ob, kind):
     kind: 'trolley' (centro de ruedas, eje de traslación = eje largo del riel), 'spreader' (centro superior, eje -Z),
     'wheel' (centro, eje = dimensión más corta), 'steer' (centro, eje Z), 'rudder' (mecha: 22 % desde el borde de
     ataque, arriba), 'propeller' (centro, eje X), 'twistlock' (centro, eje Z), 'hinge' (se pasa a mano)."""
+    # la matriz de mundo tiene que estar al día: recién emparentada, la caja saldría con la del padre viejo y el
+    # pivote quedaría lejos de la pieza (así volaban los twistlocks al girar)
+    bpy.context.view_layer.update()
     lo, hi = bbox_world(ob)
     c = (lo + hi) / 2
     size = hi - lo

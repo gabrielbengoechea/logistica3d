@@ -40,6 +40,7 @@ REGLAS = [
 
 def caja(ob):
     """Caja de mundo de la geometría del objeto y de sus hijos (para los vacíos que agrupan piezas)."""
+    bpy.context.view_layer.update()
     objs = [o for o in K.subtree(ob) if o.type == "MESH" and not o.name.startswith("UCX_")]
     if not objs:
         return None
